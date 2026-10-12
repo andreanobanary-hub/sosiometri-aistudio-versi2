@@ -1,0 +1,2415 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sosiometri BK - Asesmen Dinamika Kelompok & Sosiogram</title>
+  <meta name="description" content="Instrumen Asesmen Sosiometri Bimbingan dan Konseling (BK) lengkap dengan Sosiogram Interaktif, Matriks N x N, Klasifikasi Status Sosial, Rekomendasi Kelompok Belajar, dan Cetak PDF." />
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              200: '#bfdbfe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+              950: '#172554'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Vis.js Network CDN -->
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+    
+    /* Custom Scrollbar for large matrix tables */
+    .table-container::-webkit-scrollbar {
+      height: 8px;
+      width: 8px;
+    }
+    .table-container::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    .table-container::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .table-container::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Print styles strictly tailored for A4 landscape & portrait */
+    @media print {
+      body {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        font-size: 11pt !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+      .page-break {
+        page-break-after: always;
+        break-after: page;
+      }
+      .avoid-break {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      .report-card {
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 0 !important;
+      }
+      @page {
+        size: A4;
+        margin: 1.5cm;
+      }
+    }
+
+    @media screen {
+      .print-only {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full"></div>
+
+  <!-- Modal Konfirmasi / Edit -->
+  <div id="modalOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div id="modalContent" class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 transform transition-all"></div>
+  </div>
+
+  <!-- Header Banner (Navigation & Identity) -->
+  <header class="no-print bg-gradient-to-r from-brand-950 via-brand-900 to-indigo-900 text-white shadow-lg border-b border-brand-800/60 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between py-3.5 gap-3">
+        <!-- Logo & Title -->
+        <div class="flex items-center space-x-3.5">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-md shadow-brand-500/20 text-white font-black text-xl">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h1 class="text-lg font-bold tracking-tight text-white leading-tight">Sosiometri BK</h1>
+              <span class="text-[10px] font-semibold uppercase tracking-wider bg-blue-500/30 text-blue-200 border border-blue-400/30 px-2 py-0.5 rounded-full">v2.0 Standalone</span>
+            </div>
+            <p class="text-xs text-blue-200/80">Instrumen Asesmen Dinamika Sosial & Hubungan Interpersonal Siswa</p>
+          </div>
+        </div>
+
+        <!-- Quick Summary & Config Info -->
+        <div class="flex items-center flex-wrap gap-2 text-xs">
+          <button onclick="openConfigModal()" class="flex items-center space-x-1.5 bg-brand-800/80 hover:bg-brand-700/80 text-blue-100 px-3 py-1.5 rounded-lg border border-brand-700/60 transition">
+            <svg class="w-3.5 h-3.5 text-blue-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <span id="headerKelasLabel" class="font-semibold">Kelas: X-E6</span>
+            <span class="text-blue-400">·</span>
+            <span id="headerSekolahLabel" class="text-blue-200">SMA Negeri 1</span>
+          </button>
+          
+          <div class="flex items-center space-x-1.5 bg-black/25 px-3 py-1.5 rounded-lg border border-white/10 text-blue-100">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="quickStatText">0 Siswa (0 Mengisi)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex space-x-1 overflow-x-auto table-container pt-1 pb-2 border-t border-brand-800/50 text-sm font-medium">
+        <button onclick="switchTab('angket')" id="nav-angket" class="tab-btn flex items-center space-x-2 px-3.5 py-2 rounded-lg transition whitespace-nowrap text-blue-100 hover:bg-brand-800/60">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>1. Angket Siswa</span>
+        </button>
+        <button onclick="switchTab('sosiogram')" id="nav-sosiogram" class="tab-btn flex items-center space-x-2 px-3.5 py-2 rounded-lg transition whitespace-nowrap text-blue-100 hover:bg-brand-800/60">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+          <span>2. Sosiogram (Graf Jejaring)</span>
+        </button>
+        <button onclick="switchTab('matriks')" id="nav-matriks" class="tab-btn flex items-center space-x-2 px-3.5 py-2 rounded-lg transition whitespace-nowrap text-blue-100 hover:bg-brand-800/60">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <span>3. Matriks Sosiometri</span>
+        </button>
+        <button onclick="switchTab('laporan')" id="nav-laporan" class="tab-btn flex items-center space-x-2 px-3.5 py-2 rounded-lg transition whitespace-nowrap text-blue-100 hover:bg-brand-800/60">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>4. Laporan & Cetak PDF</span>
+        </button>
+        <button onclick="switchTab('manajemen')" id="nav-manajemen" class="tab-btn flex items-center space-x-2 px-3.5 py-2 rounded-lg transition whitespace-nowrap text-blue-100 hover:bg-brand-800/60">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          <span>5. Manajemen Siswa & Backup</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+    <!-- TAB 1: ANGKET PEMILIHAN SOSIOMETRI -->
+    <section id="tab-angket" class="tab-content space-y-6">
+      <!-- Banner Pengantar Angket -->
+      <div class="no-print bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <span class="inline-flex items-center text-xs font-semibold text-brand-700 bg-brand-50 border border-brand-200 px-2.5 py-1 rounded-md mb-2">
+            Instrumen Pilihan Teman Belajar / Kelompok Diskusi
+          </span>
+          <h2 class="text-xl font-bold text-slate-800">Formulir Pemilihan Sosiometri Siswa</h2>
+          <p class="text-sm text-slate-600 mt-1 max-w-2xl">
+            Siswa diminta menentukan 3 teman yang paling diinginkan untuk belajar atau berdiskusi kelompok. Jawaban bersifat rahasia dan hanya digunakan guru BK untuk menyusun dinamika kelas yang sehat.
+          </p>
+        </div>
+        <!-- Progress Bar Pengisian -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 min-w-[240px]">
+          <div class="flex items-center justify-between text-xs font-semibold text-slate-600 mb-1.5">
+            <span>Partisipasi Responden</span>
+            <span id="angketProgressPercent" class="text-brand-700">0%</span>
+          </div>
+          <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+            <div id="angketProgressBar" class="bg-gradient-to-r from-blue-500 to-indigo-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+          <p id="angketProgressDetail" class="text-[11px] text-slate-500 mt-2">0 dari 0 siswa telah mengisi</p>
+        </div>
+      </div>
+
+      <!-- Grid Form & Status Siswa -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Form Pengisian -->
+        <div class="lg:col-span-7 bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-sm">
+          <form id="formSosiometri" onsubmit="handleSimpanPilihan(event)" class="space-y-6">
+            <div>
+              <label class="block text-sm font-bold text-slate-800 mb-1.5">
+                1. Nama Kamu (Siswa Pemilih) <span class="text-red-500">*</span>
+              </label>
+              <select id="inputPemilih" onchange="handlePemilihChange()" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition text-sm">
+                <option value="">-- Pilih Nama Kamu --</option>
+              </select>
+              <p id="pemilihStatusNote" class="text-xs text-slate-500 mt-1.5"></p>
+            </div>
+
+            <div class="border-t border-slate-100 pt-5 space-y-4">
+              <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider text-xs">Pilihan Teman yang Diinginkan</h3>
+              
+              <!-- Pilihan 1 -->
+              <div class="p-4 bg-blue-50/50 rounded-xl border border-blue-100">
+                <div class="flex items-center justify-between mb-1.5">
+                  <label class="text-sm font-bold text-blue-900 flex items-center space-x-2">
+                    <span class="w-6 h-6 rounded-lg bg-blue-600 text-white text-xs flex items-center justify-center font-bold">1</span>
+                    <span>Pilihan Pertama (Prioritas Utama)</span>
+                  </label>
+                  <span class="text-[11px] font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">Bobot: 3 Poin</span>
+                </div>
+                <select id="inputPilihan1" onchange="validatePilihanUnik()" required class="w-full px-3.5 py-2.5 bg-white border border-blue-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                  <option value="">-- Pilih Teman Pilihan 1 --</option>
+                </select>
+              </div>
+
+              <!-- Pilihan 2 -->
+              <div class="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                <div class="flex items-center justify-between mb-1.5">
+                  <label class="text-sm font-bold text-indigo-900 flex items-center space-x-2">
+                    <span class="w-6 h-6 rounded-lg bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">2</span>
+                    <span>Pilihan Kedua</span>
+                  </label>
+                  <span class="text-[11px] font-semibold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded">Bobot: 2 Poin</span>
+                </div>
+                <select id="inputPilihan2" onchange="validatePilihanUnik()" required class="w-full px-3.5 py-2.5 bg-white border border-indigo-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                  <option value="">-- Pilih Teman Pilihan 2 --</option>
+                </select>
+              </div>
+
+              <!-- Pilihan 3 -->
+              <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <div class="flex items-center justify-between mb-1.5">
+                  <label class="text-sm font-bold text-slate-800 flex items-center space-x-2">
+                    <span class="w-6 h-6 rounded-lg bg-slate-600 text-white text-xs flex items-center justify-center font-bold">3</span>
+                    <span>Pilihan Ketiga (Cadangan)</span>
+                  </label>
+                  <span class="text-[11px] font-semibold text-slate-600 bg-slate-200 px-2 py-0.5 rounded">Bobot: 1 Poin</span>
+                </div>
+                <select id="inputPilihan3" onchange="validatePilihanUnik()" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-slate-800 focus:ring-2 focus:ring-slate-400 outline-none text-sm">
+                  <option value="">-- Pilih Teman Pilihan 3 (Opsional) --</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Alasan Memilih -->
+            <div>
+              <label class="block text-sm font-bold text-slate-800 mb-1.5">
+                Alasan / Alasan Memilih Teman Tersebut <span class="text-xs font-normal text-slate-500">(Opsional untuk catatan guru BK)</span>
+              </label>
+              <textarea id="inputAlasan" rows="2" placeholder="Contoh: Mudah diajak berdiskusi, saling melengkapi cara belajar, disiplin..." class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none transition text-sm"></textarea>
+            </div>
+
+            <!-- Peringatan Validasi -->
+            <div id="formValidationAlert" class="hidden p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center space-x-2">
+              <svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              <span id="formValidationText">Periksa kembali pilihan Anda.</span>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex items-center space-x-3 pt-2">
+              <button type="submit" id="btnSubmitAngket" class="flex-1 bg-gradient-to-r from-brand-700 to-indigo-700 hover:from-brand-800 hover:to-indigo-800 text-white font-semibold py-3 px-6 rounded-xl shadow-md shadow-brand-700/20 transition flex items-center justify-center space-x-2 text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                <span>Kirim Pilihan Sosiometri</span>
+              </button>
+              <button type="button" onclick="resetFormAngket()" class="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition text-sm">
+                Reset
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Daftar Siswa & Status Respons -->
+        <div class="lg:col-span-5 space-y-4">
+          <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col h-[560px]">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 class="text-sm font-bold text-slate-800">Daftar Status Pengisian Siswa</h3>
+              <span id="badgeBelumMengisi" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800">0 Belum Mengisi</span>
+            </div>
+            
+            <!-- Filter & Search Siswa -->
+            <div class="py-3">
+              <input type="text" id="searchAngketSiswa" oninput="renderStatusPengisianList()" placeholder="Cari nama siswa..." class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:ring-1 focus:ring-brand-500" />
+            </div>
+
+            <!-- List Siswa -->
+            <div id="statusPengisianContainer" class="flex-1 overflow-y-auto space-y-2 pr-1 table-container">
+              <!-- Render via JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: SOSIOGRAM (GRAF JEJARING VIS.JS) -->
+    <section id="tab-sosiogram" class="tab-content hidden space-y-6">
+      <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center space-x-2">
+            <h2 class="text-xl font-bold text-slate-800">Sosiogram Dinamika Hubungan Sosial Siswa</h2>
+            <span class="text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-0.5 rounded-full">Interactive Vis.js Graph</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-1">
+            Visualisasi graf berarah: node adalah siswa, anak panah menunjukkan arah pilihan teman, garis ganda/tebal menandakan saling memilih (Mutual Choices).
+          </p>
+        </div>
+
+        <!-- Controls Toolbar -->
+        <div class="flex items-center flex-wrap gap-2">
+          <!-- Filter Relasi -->
+          <select id="filterGraphMode" onchange="renderSosiogramGraph()" class="bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold px-3 py-2 text-slate-700 outline-none">
+            <option value="all">Semua Relasi Pilihan</option>
+            <option value="mutual">Hanya Hubungan Timbal Balik (Mutual)</option>
+            <option value="p1">Hanya Pilihan Utama (P1)</option>
+          </select>
+
+          <!-- Filter Gender -->
+          <select id="filterGraphGender" onchange="renderSosiogramGraph()" class="bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold px-3 py-2 text-slate-700 outline-none">
+            <option value="all">Semua Siswa (L & P)</option>
+            <option value="L">Khusus Laki-laki (L)</option>
+            <option value="P">Khusus Perempuan (P)</option>
+          </select>
+
+          <!-- Action Buttons -->
+          <button onclick="fitGraphView()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-3 py-2 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5" title="Reset Zoom dan Pusat Layar">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+            <span>Reset Zoom</span>
+          </button>
+          
+          <button id="btnTogglePhysics" onclick="toggleGraphPhysics()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-3 py-2 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span id="physicsStatusLabel">Fisika: ON</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Graph Canvas and Interactive Info Panel -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Canvas Sosiogram -->
+        <div class="lg:col-span-8 bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col h-[620px] relative">
+          <!-- Canvas Container -->
+          <div id="sosiogramNetwork" class="flex-1 w-full h-full bg-slate-900/5"></div>
+          
+          <!-- Interactive Legend Overlay -->
+          <div class="absolute bottom-3 left-3 bg-white/95 backdrop-blur-sm p-3.5 rounded-xl border border-slate-200 shadow-md text-[11px] space-y-1.5 pointer-events-auto max-w-xs">
+            <span class="font-bold text-slate-800 block text-xs">Legenda Warna Node Siswa:</span>
+            <div class="flex items-center space-x-2">
+              <span class="w-3.5 h-3.5 rounded-full bg-amber-400 border border-amber-600 inline-block shadow-sm"></span>
+              <span class="text-slate-700"><strong>Star (Bintang)</strong>: Sangat disukai & banyak dipilih</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="w-3.5 h-3.5 rounded-full bg-blue-500 border border-blue-700 inline-block shadow-sm"></span>
+              <span class="text-slate-700"><strong>Average</strong>: Jumlah pilihan rata-rata</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="w-3.5 h-3.5 rounded-full bg-rose-400 border border-rose-600 inline-block shadow-sm"></span>
+              <span class="text-slate-700"><strong>Isolate</strong>: Tidak ada yang memilih (0 pilihan)</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="w-3.5 h-3.5 rounded-full bg-slate-400 border border-slate-600 inline-block shadow-sm"></span>
+              <span class="text-slate-700"><strong>Neglected</strong>: Sangat sedikit pilihan</span>
+            </div>
+            <div class="pt-1 border-t border-slate-200 flex items-center space-x-2">
+              <span class="w-5 h-0.5 bg-emerald-500 inline-block"></span>
+              <span class="text-emerald-700 font-semibold">Garis Hijau: Mutual Choice (Saling Memilih)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Node Inspector / Sidebar Detail Siswa yang Diklik -->
+        <div class="lg:col-span-4 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col h-[620px]">
+          <div class="border-b border-slate-100 pb-3 mb-4">
+            <h3 class="text-base font-bold text-slate-800">Detail Hubungan Siswa</h3>
+            <p class="text-xs text-slate-500">Klik salah satu node siswa di graf untuk memeriksa jaringannya secara mendalam.</p>
+          </div>
+
+          <div id="nodeDetailContainer" class="flex-1 overflow-y-auto space-y-4 pr-1 table-container">
+            <!-- Default Placeholder -->
+            <div class="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
+              <svg class="w-12 h-12 mb-3 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>
+              <p class="text-sm font-semibold text-slate-600">Belum ada siswa dipilih</p>
+              <p class="text-xs text-slate-400 mt-1">Klik lingkaran nama siswa pada sosiogram untuk melihat siapa saja yang memilihnya dan siapa saja yang ia pilih.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: MATRIKS SOSIOMETRI -->
+    <section id="tab-matriks" class="tab-content hidden space-y-6">
+      <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-800">Matriks Sosiometri N x N</h2>
+          <p class="text-xs text-slate-500 mt-1">
+            Baris horizontal mewakili Siswa Pemilih, kolom vertikal mewakili Siswa yang Dipilih. Nilai sel: 3 = Pilihan 1, 2 = Pilihan 2, 1 = Pilihan 3.
+          </p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="exportMatrixToCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-sm transition flex items-center space-x-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <span>Ekspor Matriks CSV</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Matrix Table Card -->
+      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs text-slate-600 font-medium">
+          <div class="flex items-center space-x-4">
+            <span class="flex items-center space-x-1.5"><span class="w-3 h-3 bg-emerald-100 border border-emerald-400 rounded inline-block"></span> <span>⇄ Hubungan Timbal Balik (Mutual)</span></span>
+            <span class="flex items-center space-x-1.5"><span class="w-3 h-3 bg-slate-200 rounded inline-block"></span> <span>Diagonal: Diri Sendiri</span></span>
+          </div>
+          <span class="text-slate-500">Bobot: P1 = 3 poin | P2 = 2 poin | P3 = 1 poin</span>
+        </div>
+
+        <div class="overflow-x-auto table-container max-h-[600px]">
+          <table id="matrixTable" class="w-full text-xs text-center border-collapse">
+            <!-- Dynamic Matrix Table via JS -->
+          </table>
+        </div>
+      </div>
+
+      <!-- Keterangan Rumus & Indeks Sosiometri -->
+      <div class="bg-blue-50/70 border border-blue-200 rounded-2xl p-5 text-xs text-slate-700 space-y-2">
+        <h4 class="font-bold text-blue-900 text-sm flex items-center space-x-1.5">
+          <svg class="w-4 h-4 text-blue-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>Penjelasan Rumus & Indeks Pilihan Sosiometri (Choice Status)</span>
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+          <div class="bg-white p-3 rounded-xl border border-blue-100">
+            <span class="font-bold text-slate-900 block mb-1">Skor Berbobot (W)</span>
+            <p class="text-slate-600 text-[11px] font-mono mb-1">(P1 × 3) + (P2 × 2) + (P3 × 1)</p>
+            <p class="text-slate-500 text-[11px]">Mengakomodasi derajat prioritas pilihan yang diberikan rekan sekelas.</p>
+          </div>
+          <div class="bg-white p-3 rounded-xl border border-blue-100">
+            <span class="font-bold text-slate-900 block mb-1">Indeks Status Sosial (CS)</span>
+            <p class="text-slate-600 text-[11px] font-mono mb-1">CS = W / ((N - 1) × 3)</p>
+            <p class="text-slate-500 text-[11px]">Nilai proporsi skor aktual terhadap skor maksimal yang mungkin dicapai siswa dalam kelas tersebut.</p>
+          </div>
+          <div class="bg-white p-3 rounded-xl border border-blue-100">
+            <span class="font-bold text-slate-900 block mb-1">Indeks Kohesivitas Kelas (CI)</span>
+            <p class="text-slate-600 text-[11px] font-mono mb-1">CI = Total Pasangan Saling Memilih / Maks. Kemungkinan</p>
+            <p class="text-slate-500 text-[11px]">Mengukur kepadatan ikatan pertemanan dan kekompakan hubungan sosial dalam kelas.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: LAPORAN & CETAK PDF -->
+    <section id="tab-laporan" class="tab-content hidden space-y-6">
+      <!-- Toolbar Aksi Cetak -->
+      <div class="no-print bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-800">Laporan Resmi Asesmen Sosiometri BK</h2>
+          <p class="text-xs text-slate-500 mt-1">
+            Dilengkapi kop surat sekolah, rekapitulasi dinamika kelompok, deteksi siswa berisiko terisolir, dan pembentukan kelompok belajar seimbang.
+          </p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="openConfigModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-semibold border border-slate-300 transition flex items-center space-x-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            <span>Edit Kop & Identitas BK</span>
+          </button>
+          <button onclick="window.print()" class="bg-gradient-to-r from-brand-700 to-indigo-700 hover:from-brand-800 hover:to-indigo-800 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md shadow-brand-700/20 transition flex items-center space-x-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+            <span>Cetak Laporan / Simpan PDF</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- DOKUMEN LAPORAN CETAK RESMI -->
+      <div id="printDocumentArea" class="bg-white rounded-2xl p-6 sm:p-10 border border-slate-200/80 shadow-sm report-card space-y-8">
+        
+        <!-- KOP SURAT SEKOLAH -->
+        <div class="border-b-2 border-slate-900 pb-4 text-center relative">
+          <div class="flex items-center justify-center space-x-4 mb-2">
+            <div class="w-16 h-16 rounded-full border-2 border-slate-800 flex items-center justify-center font-bold text-slate-800 text-xl tracking-tighter">
+              <svg class="w-10 h-10 text-brand-900" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+            </div>
+            <div>
+              <h2 id="kopNamaSekolah" class="text-xl sm:text-2xl font-black text-slate-900 uppercase tracking-wide">SMA NEGERI 1 INDONESIA</h2>
+              <p class="text-xs sm:text-sm font-semibold text-slate-700 tracking-wider">UNIT BIMBINGAN DAN KONSELING (BK)</p>
+              <p class="text-[11px] text-slate-500">Jl. Pendidikan No. 45, Kompleks Prestasi, Layanan Psikologis & Pengembangan Peserta Didik</p>
+            </div>
+          </div>
+          <div class="w-full h-0.5 bg-slate-900 mt-2"></div>
+        </div>
+
+        <!-- JUDUL DOKUMEN LAPORAN -->
+        <div class="text-center space-y-1">
+          <h3 class="text-base sm:text-lg font-extrabold text-slate-900 uppercase underline decoration-2 underline-offset-4">
+            LAPORAN HASIL ASESMEN SOSIOMETRI KELAS
+          </h3>
+          <p class="text-xs text-slate-600 font-medium">Instrumen Pemetaan Struktur Hubungan Sosial & Dinamika Kelompok</p>
+        </div>
+
+        <!-- METADATA ASESMEN -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div>
+              <span class="text-slate-500 block text-[11px]">Kelas:</span>
+              <span id="repKelas" class="font-bold text-slate-800 text-sm">X-E6</span>
+            </div>
+            <div>
+              <span class="text-slate-500 block text-[11px]">Semester / T.A.:</span>
+              <span id="repSemesterTahun" class="font-bold text-slate-800 text-sm">Ganjil / 2024-2025</span>
+            </div>
+            <div>
+              <span class="text-slate-500 block text-[11px]">Kriteria Pilihan:</span>
+              <span id="repKriteria" class="font-bold text-slate-800">Teman Belajar Kelompok</span>
+            </div>
+            <div>
+              <span class="text-slate-500 block text-[11px]">Tanggal Asesmen:</span>
+              <span id="repTanggal" class="font-bold text-slate-800">12 Oktober 2024</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RINGKASAN STATISTIK KELAS -->
+        <div class="space-y-3">
+          <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wide border-l-4 border-brand-700 pl-2.5">
+            I. Ringkasan Eksekutif Dinamika Sosial Kelas
+          </h4>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+            <div class="p-3 bg-blue-50 border border-blue-200 rounded-xl">
+              <span class="text-[11px] font-semibold text-blue-700 block">Total Siswa Terdaftar</span>
+              <span id="repStatTotalSiswa" class="text-xl font-black text-blue-900">0</span>
+            </div>
+            <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+              <span class="text-[11px] font-semibold text-emerald-700 block">Partisipasi Responden</span>
+              <span id="repStatPartisipasi" class="text-xl font-black text-emerald-900">0%</span>
+            </div>
+            <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+              <span class="text-[11px] font-semibold text-amber-700 block">Pasangan Saling Memilih</span>
+              <span id="repStatMutualPairs" class="text-xl font-black text-amber-900">0 Pasang</span>
+            </div>
+            <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl">
+              <span class="text-[11px] font-semibold text-rose-700 block">Siswa Butuh Perhatian (Isolate)</span>
+              <span id="repStatIsolateCount" class="text-xl font-black text-rose-900">0 Siswa</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TABEL ANALISIS STATUS SOSIOMETRI SISWA -->
+        <div class="space-y-3 avoid-break">
+          <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wide border-l-4 border-brand-700 pl-2.5">
+            II. Tabel Pemetaan Status Sosiometri Siswa
+          </h4>
+          <div class="overflow-x-auto border border-slate-200 rounded-xl">
+            <table class="w-full text-xs text-left">
+              <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                <tr>
+                  <th class="p-2.5 text-center w-10">No</th>
+                  <th class="p-2.5">Nama Siswa</th>
+                  <th class="p-2.5 text-center w-12">L/P</th>
+                  <th class="p-2.5 text-center w-16">P1 (×3)</th>
+                  <th class="p-2.5 text-center w-16">P2 (×2)</th>
+                  <th class="p-2.5 text-center w-16">P3 (×1)</th>
+                  <th class="p-2.5 text-center w-16">Total (F)</th>
+                  <th class="p-2.5 text-center w-20">Skor (W)</th>
+                  <th class="p-2.5 text-center w-20">Indeks CS</th>
+                  <th class="p-2.5 text-center w-24">Klasifikasi</th>
+                </tr>
+              </thead>
+              <tbody id="repTableBody" class="divide-y divide-slate-100">
+                <!-- Diisi via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TEMUAN KHUSUS & REKOMENDASI INTERVENSI BK -->
+        <div class="space-y-3 avoid-break">
+          <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wide border-l-4 border-brand-700 pl-2.5">
+            III. Temuan Khusus & Diagnosis Kebutuhan Peserta Didik
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <!-- Siswa Star -->
+            <div class="bg-amber-50/60 border border-amber-200 rounded-xl p-4 space-y-2">
+              <div class="flex items-center space-x-2 text-amber-900 font-bold">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                <span>Siswa Bintang Kelas (Star / Populer)</span>
+              </div>
+              <p id="repStarDesc" class="text-slate-700 leading-relaxed"></p>
+              <div class="text-[11px] text-amber-800 bg-white/80 p-2 rounded-lg border border-amber-100">
+                <strong>Rekomendasi Peran:</strong> Diberdayakan sebagai tutor sebaya (peer counselor), ketua kelompok kerja, dan agen inklusi pertemanan.
+              </div>
+            </div>
+
+            <!-- Siswa Terisolir -->
+            <div class="bg-rose-50/60 border border-rose-200 rounded-xl p-4 space-y-2">
+              <div class="flex items-center space-x-2 text-rose-900 font-bold">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                <span>Siswa Terisolir / Diabaikan (Memerlukan Pendampingan)</span>
+              </div>
+              <p id="repIsolateDesc" class="text-slate-700 leading-relaxed"></p>
+              <div class="text-[11px] text-rose-800 bg-white/80 p-2 rounded-lg border border-rose-100">
+                <strong>Rekomendasi Tindakan BK:</strong> Penjadwalan konseling individual, observasi adaptasi sosial di kelas, serta bimbingan kelompok suportif.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- REKOMENDASI PEMBAGIAN KELOMPOK BELAJAR SEIMBANG -->
+        <div class="space-y-3 avoid-break">
+          <div class="flex items-center justify-between">
+            <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wide border-l-4 border-brand-700 pl-2.5">
+              IV. Rekomendasi Susunan Kelompok Belajar Seimbang (Anti-Klik)
+            </h4>
+            <div class="no-print flex items-center space-x-2 text-xs">
+              <span class="text-slate-500">Bagi menjadi:</span>
+              <select id="selectJumlahKelompok" onchange="renderKelompokBelajar()" class="bg-slate-100 border border-slate-300 rounded-lg px-2.5 py-1 font-semibold text-slate-700 outline-none">
+                <option value="2">2 Kelompok</option>
+                <option value="3" selected>3 Kelompok</option>
+                <option value="4">4 Kelompok</option>
+                <option value="5">5 Kelompok</option>
+              </select>
+            </div>
+          </div>
+          <p class="text-xs text-slate-600">
+            Algoritma otomatis mendistribusikan siswa Star sebagai poros, merangkul siswa terisolir dengan pendamping suportif, dan menyeimbangkan komposisi gender untuk menghindari klik eksklusif.
+          </p>
+          <div id="rekomendasiKelompokContainer" class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+            <!-- Diisi via JS -->
+          </div>
+        </div>
+
+        <!-- PROGRAM LAYANAN BIMBINGAN DAN KONSELING -->
+        <div class="space-y-3 avoid-break">
+          <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wide border-l-4 border-brand-700 pl-2.5">
+            V. Rencana Program Layanan Bimbingan & Konseling Terpadu
+          </h4>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div class="border border-slate-200 rounded-xl p-3.5 bg-slate-50">
+              <span class="font-bold text-brand-900 block mb-1">1. Bimbingan Klasikal</span>
+              <p class="text-slate-600 text-[11px] leading-relaxed">
+                Topik: <em>"Membangun Komunikasi Positif, Empati, dan Menghargai Keragaman Karakter Rekan Sebaya"</em>.
+              </p>
+            </div>
+            <div class="border border-slate-200 rounded-xl p-3.5 bg-slate-50">
+              <span class="font-bold text-brand-900 block mb-1">2. Bimbingan Kelompok</span>
+              <p class="text-slate-600 text-[11px] leading-relaxed">
+                Topik: <em>"Keterampilan Asertif dan Berbaur Tanpa Cemas dalam Kelompok Belajar"</em>.
+              </p>
+            </div>
+            <div class="border border-slate-200 rounded-xl p-3.5 bg-slate-50">
+              <span class="font-bold text-brand-900 block mb-1">3. Konseling Individual</span>
+              <p class="text-slate-600 text-[11px] leading-relaxed">
+                Eksplorasi mendalam terkait hambatan kepercayaan diri, potensi penarikan diri sosial, atau trauma pertemanan masa lalu.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- TANDA TANGAN RESMI -->
+        <div class="pt-6 border-t border-slate-200 avoid-break">
+          <div class="grid grid-cols-2 gap-8 text-xs text-center">
+            <div>
+              <p class="text-slate-500 mb-1">Mengetahui,</p>
+              <p class="font-bold text-slate-800">Kepala Sekolah</p>
+              <div class="h-20"></div>
+              <p id="repKepalaSekolah" class="font-bold text-slate-900 underline">Dr. H. Bambang Subagyo, M.Pd.</p>
+              <p id="repNipKepsek" class="text-slate-500 text-[11px]">NIP. 19750312 199903 1 004</p>
+            </div>
+            <div>
+              <p id="repKotaTanggal" class="text-slate-500 mb-1">Jakarta, 12 Oktober 2024</p>
+              <p class="font-bold text-slate-800">Guru Bimbingan dan Konseling</p>
+              <div class="h-20"></div>
+              <p id="repGuruBK" class="font-bold text-slate-900 underline">Dra. Siti Rahmawati, M.Pd., Kons.</p>
+              <p id="repNipGuru" class="text-slate-500 text-[11px]">NIP. 19820514 200801 2 009</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 5: MANAJEMEN SISWA & BACKUP DATA -->
+    <section id="tab-manajemen" class="tab-content hidden space-y-6">
+      
+      <!-- Top Action Bar: Sample Data & Reset -->
+      <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-800">Manajemen Siswa & Pencadangan Data</h2>
+          <p class="text-xs text-slate-500 mt-1">
+            Seluruh data tersimpan aman di peramban lokal (LocalStorage). Ekspor cadangan file JSON untuk dipindahkan ke komputer/laptop lain.
+          </p>
+        </div>
+        <div class="flex items-center flex-wrap gap-2">
+          <button onclick="loadSampleDemoData()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5">
+            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+            <span>Muat Data Sampel/Demo (12 Siswa)</span>
+          </button>
+          
+          <button onclick="backupDataJSON()" class="bg-brand-700 hover:bg-brand-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            <span>Cadangkan Data (.JSON)</span>
+          </button>
+
+          <label class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition flex items-center space-x-1.5">
+            <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+            <span>Pulihkan Data (.JSON)</span>
+            <input type="file" id="uploadJSONFile" accept=".json" onchange="handleRestoreJSON(event)" class="hidden" />
+          </label>
+
+          <button onclick="confirmResetAllData()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1">
+            <svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            <span>Kosongkan Semua</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tambah Siswa Form (Single & Paste Multiple) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Tambah Satu per Satu -->
+        <div class="lg:col-span-5 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm space-y-4">
+          <h3 class="text-sm font-bold text-slate-800 flex items-center space-x-2">
+            <span class="w-2 h-2 rounded-full bg-brand-600"></span>
+            <span>Tambah Siswa Satu per Satu</span>
+          </h3>
+          <form onsubmit="handleTambahSiswaSatu(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Lengkap Siswa</label>
+              <input type="text" id="inputNamaTunggal" placeholder="Contoh: Muhammad Farhan" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Jenis Kelamin</label>
+              <div class="grid grid-cols-2 gap-3">
+                <label class="flex items-center space-x-2 p-2.5 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 text-xs font-medium">
+                  <input type="radio" name="genderTunggal" value="L" checked class="text-brand-600 focus:ring-brand-500" />
+                  <span>Laki-laki (L)</span>
+                </label>
+                <label class="flex items-center space-x-2 p-2.5 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 text-xs font-medium">
+                  <input type="radio" name="genderTunggal" value="P" class="text-brand-600 focus:ring-brand-500" />
+                  <span>Perempuan (P)</span>
+                </label>
+              </div>
+            </div>
+            <button type="submit" class="w-full bg-brand-700 hover:bg-brand-800 text-white font-semibold py-2.5 px-4 rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+              <span>Tambahkan Siswa</span>
+            </button>
+          </form>
+
+          <div class="border-t border-slate-100 pt-4">
+            <details class="text-xs group">
+              <summary class="font-bold text-slate-700 cursor-pointer list-none flex items-center justify-between p-2 rounded-lg hover:bg-slate-50">
+                <span>Tempel / Paste Banyak Nama Sekaligus</span>
+                <span class="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+              <div class="pt-3 space-y-3">
+                <p class="text-[11px] text-slate-500">Tulis atau paste satu nama per baris. Contoh: Ahmad Fauzan (L) atau ketik nama saja.</p>
+                <textarea id="inputBatchNama" rows="4" placeholder="Aditya Pratama (L)&#10;Anisa Rahma (P)&#10;Bagus Permadi (L)&#10;Citra Lestari (P)" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none font-mono"></textarea>
+                <div class="flex items-center justify-between">
+                  <select id="batchDefaultGender" class="text-xs bg-slate-50 border border-slate-300 rounded-lg p-1.5">
+                    <option value="auto">Deteksi Otomatis (L/P di baris)</option>
+                    <option value="L">Default Laki-laki</option>
+                    <option value="P">Default Perempuan</option>
+                  </select>
+                  <button type="button" onclick="handleTambahSiswaBatch()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3 py-1.5 rounded-lg text-xs transition">
+                    Proses Batch
+                  </button>
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <!-- Tabel Daftar Siswa Terdaftar -->
+        <div class="lg:col-span-7 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+            <div class="flex items-center space-x-2">
+              <h3 class="text-sm font-bold text-slate-800">Daftar Siswa Kelas Terdaftar</h3>
+              <span id="badgeTotalSiswa" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">0 Siswa</span>
+            </div>
+            <input type="text" id="searchTabelSiswa" oninput="renderTabelSiswaManajemen()" placeholder="Filter siswa..." class="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:ring-1 focus:ring-brand-500" />
+          </div>
+
+          <!-- Table Container -->
+          <div class="flex-1 overflow-x-auto table-container max-h-[420px] border border-slate-100 rounded-xl">
+            <table class="w-full text-xs text-left">
+              <thead class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 sticky top-0 z-10">
+                <tr>
+                  <th class="p-3 text-center w-10">No</th>
+                  <th class="p-3">Nama Siswa</th>
+                  <th class="p-3 text-center w-16">Gender</th>
+                  <th class="p-3 text-center w-28">Status Angket</th>
+                  <th class="p-3 text-center w-24">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="tabelSiswaBody" class="divide-y divide-slate-100">
+                <!-- Diisi via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="no-print bg-white border-t border-slate-200/80 py-4 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <p>© Aplikasi Asesmen Sosiometri Bimbingan dan Konseling - Penyimpanan Lokal Peramban (Offline First)</p>
+      <p class="text-slate-400">Dirancang untuk Guru BK, Konselor Sekolah, dan Peneliti Dinamika Kelompok</p>
+    </div>
+  </footer>
+
+  <!-- SCRIPT LOGIKA APLIKASI UTAMA (VANILLA JAVASCRIPT) -->
+  <script>
+    // ==========================================
+    // 1. DATA STATE & STORAGE MANAGER
+    // ==========================================
+    const STORAGE_KEY = 'sosiometri_bk_app_v2';
+
+    // Model Default State
+    let AppState = {
+      meta: {
+        namaSekolah: "SMA NEGERI 1 INDONESIA",
+        kelas: "X-E6",
+        semester: "Semester Ganjil",
+        tahunAjaran: "2024/2025",
+        kriteria: "Teman Belajar Kelompok & Diskusi",
+        guruBK: "Dra. Siti Rahmawati, M.Pd., Kons.",
+        nipGuru: "19820514 200801 2 009",
+        kepalaSekolah: "Dr. H. Bambang Subagyo, M.Pd.",
+        nipKepsek: "19750312 199903 1 004",
+        kota: "Jakarta",
+        tanggalAsesmen: new Date().toISOString().split('T')[0]
+      },
+      students: [], // [{ id: 's1', nama: '...', gender: 'L'|'P' }]
+      choices: {}   // { [studentId]: { p1: 's2', p2: 's3', p3: 's4', alasan: '...' } }
+    };
+
+    // Muat data dari LocalStorage
+    function loadStateFromStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.students)) {
+            AppState = {
+              meta: { ...AppState.meta, ...(parsed.meta || {}) },
+              students: parsed.students || [],
+              choices: parsed.choices || {}
+            };
+          }
+        }
+      } catch (err) {
+        console.error("Gagal membaca LocalStorage:", err);
+      }
+    }
+
+    // Simpan ke LocalStorage
+    function saveStateToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(AppState));
+        syncHeaderDisplay();
+      } catch (err) {
+        console.error("Gagal menyimpan ke LocalStorage:", err);
+        showToast("Gagal menyimpan data ke browser!", "error");
+      }
+    }
+
+    // Sinkronisasi data di tampilan header
+    function syncHeaderDisplay() {
+      const elKelas = document.getElementById('headerKelasLabel');
+      const elSekolah = document.getElementById('headerSekolahLabel');
+      const elQuick = document.getElementById('quickStatText');
+      if (elKelas) elKelas.innerText = `Kelas: ${AppState.meta.kelas || '-'}`;
+      if (elSekolah) elSekolah.innerText = AppState.meta.namaSekolah || '-';
+      
+      const total = AppState.students.length;
+      const filled = Object.keys(AppState.choices).length;
+      if (elQuick) elQuick.innerText = `${total} Siswa (${filled} Mengisi)`;
+    }
+
+    // ==========================================
+    // 2. TOAST NOTIFICATION SYSTEM
+    // ==========================================
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      
+      const toast = document.createElement('div');
+      toast.className = `p-4 rounded-xl shadow-lg border text-xs font-semibold flex items-center space-x-3 transform transition-all duration-300 pointer-events-auto ${
+        type === 'success' ? 'bg-emerald-50 text-emerald-900 border-emerald-300' :
+        type === 'error' ? 'bg-rose-50 text-rose-900 border-rose-300' :
+        type === 'warning' ? 'bg-amber-50 text-amber-900 border-amber-300' :
+        'bg-slate-900 text-white border-slate-700'
+      }`;
+      
+      let icon = '';
+      if (type === 'success') {
+        icon = `<svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
+      } else if (type === 'error') {
+        icon = `<svg class="w-5 h-5 text-rose-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>`;
+      } else {
+        icon = `<svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+      }
+
+      toast.innerHTML = `${icon}<span>${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // ==========================================
+    // 3. TAB NAVIGATION
+    // ==========================================
+    let currentTab = 'angket';
+    function switchTab(tabId) {
+      currentTab = tabId;
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-brand-800', 'text-white', 'shadow-sm', 'font-bold');
+        btn.classList.add('text-blue-100');
+      });
+
+      const activeSection = document.getElementById(`tab-${tabId}`);
+      const activeNav = document.getElementById(`nav-${tabId}`);
+      if (activeSection) activeSection.classList.remove('hidden');
+      if (activeNav) {
+        activeNav.classList.add('bg-brand-800', 'text-white', 'shadow-sm', 'font-bold');
+        activeNav.classList.remove('text-blue-100');
+      }
+
+      // Re-render konten sesuai tab yang dibuka
+      if (tabId === 'angket') {
+        renderFormAngketOptions();
+        renderStatusPengisianList();
+      } else if (tabId === 'sosiogram') {
+        setTimeout(() => renderSosiogramGraph(), 100);
+      } else if (tabId === 'matriks') {
+        renderMatrixTable();
+      } else if (tabId === 'laporan') {
+        renderLaporanPage();
+      } else if (tabId === 'manajemen') {
+        renderTabelSiswaManajemen();
+      }
+    }
+
+    // ==========================================
+    // 4. ALGORITMA KALKULASI SOSIOMETRI LOKAL
+    // ==========================================
+    function calculateSociometryMetrics() {
+      const students = AppState.students;
+      const choices = AppState.choices;
+      const n = students.length;
+
+      // Map id -> student
+      const studentMap = {};
+      students.forEach(s => {
+        studentMap[s.id] = s;
+      });
+
+      // Struktur data hasil analisis per siswa
+      const stats = {};
+      students.forEach(s => {
+        stats[s.id] = {
+          student: s,
+          p1Count: 0,
+          p2Count: 0,
+          p3Count: 0,
+          totalChoicesReceived: 0, // Frekuensi (F)
+          weightedScore: 0,        // (P1*3) + (P2*2) + (P3*1)
+          choiceStatusIndex: 0,    // Skor / ((N - 1) * 3)
+          chosenBy: [],            // [{ chooserId, chooserName, rank, weight }]
+          chosenList: [],          // [{ targetId, targetName, rank, weight }]
+          mutualWith: [],          // [studentId]
+          classification: 'Average' // Star, Average, Neglected, Isolate
+        };
+      });
+
+      // Hitung pilihan yang masuk
+      students.forEach(chooser => {
+        const c = choices[chooser.id];
+        if (!c) return;
+
+        // Pilihan 1 (Bobot 3)
+        if (c.p1 && stats[c.p1]) {
+          stats[c.p1].p1Count += 1;
+          stats[c.p1].totalChoicesReceived += 1;
+          stats[c.p1].weightedScore += 3;
+          stats[c.p1].chosenBy.push({ chooserId: chooser.id, chooserName: chooser.nama, rank: 1, weight: 3 });
+          stats[chooser.id].chosenList.push({ targetId: c.p1, targetName: studentMap[c.p1]?.nama, rank: 1, weight: 3 });
+        }
+        // Pilihan 2 (Bobot 2)
+        if (c.p2 && stats[c.p2]) {
+          stats[c.p2].p2Count += 1;
+          stats[c.p2].totalChoicesReceived += 1;
+          stats[c.p2].weightedScore += 2;
+          stats[c.p2].chosenBy.push({ chooserId: chooser.id, chooserName: chooser.nama, rank: 2, weight: 2 });
+          stats[chooser.id].chosenList.push({ targetId: c.p2, targetName: studentMap[c.p2]?.nama, rank: 2, weight: 2 });
+        }
+        // Pilihan 3 (Bobot 1)
+        if (c.p3 && stats[c.p3]) {
+          stats[c.p3].p3Count += 1;
+          stats[c.p3].totalChoicesReceived += 1;
+          stats[c.p3].weightedScore += 1;
+          stats[c.p3].chosenBy.push({ chooserId: chooser.id, chooserName: chooser.nama, rank: 3, weight: 1 });
+          stats[chooser.id].chosenList.push({ targetId: c.p3, targetName: studentMap[c.p3]?.nama, rank: 3, weight: 1 });
+        }
+      });
+
+      // Deteksi Pasangan Saling Memilih (Mutual Choices)
+      const mutualPairs = [];
+      const seenPairs = new Set();
+
+      students.forEach(sA => {
+        const choiceA = choices[sA.id];
+        if (!choiceA) return;
+        const targetsA = [choiceA.p1, choiceA.p2, choiceA.p3].filter(Boolean);
+
+        targetsA.forEach(bId => {
+          const choiceB = choices[bId];
+          if (!choiceB) return;
+          const targetsB = [choiceB.p1, choiceB.p2, choiceB.p3].filter(Boolean);
+
+          if (targetsB.includes(sA.id)) {
+            // Saling memilih
+            if (!stats[sA.id].mutualWith.includes(bId)) stats[sA.id].mutualWith.push(bId);
+            if (!stats[bId].mutualWith.includes(sA.id)) stats[bId].mutualWith.push(sA.id);
+
+            const pairKey = [sA.id, bId].sort().join('___');
+            if (!seenPairs.has(pairKey)) {
+              seenPairs.add(pairKey);
+              mutualPairs.push({
+                s1: sA,
+                s2: studentMap[bId],
+                pairKey
+              });
+            }
+          }
+        });
+      });
+
+      // Hitung Indeks dan Klasifikasi Status Sosiometri
+      const maxPossibleScore = n > 1 ? (n - 1) * 3 : 1;
+      const scores = Object.values(stats).map(s => s.weightedScore);
+      const maxScore = Math.max(...scores, 0);
+      const avgScore = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+
+      // Kuartil & Threshold
+      scores.sort((a, b) => a - b);
+      const q3Score = scores.length > 0 ? scores[Math.floor(scores.length * 0.75)] : 0;
+
+      Object.values(stats).forEach(s => {
+        s.choiceStatusIndex = Number((s.weightedScore / maxPossibleScore).toFixed(3));
+
+        if (s.totalChoicesReceived === 0) {
+          s.classification = 'Isolate'; // Terisolir murni
+        } else if (s.totalChoicesReceived === 1 && s.weightedScore <= 2) {
+          s.classification = 'Neglected'; // Diabaikan / pilihan rendah
+        } else if (s.weightedScore >= q3Score && s.weightedScore > avgScore && s.weightedScore >= 4) {
+          s.classification = 'Star'; // Bintang
+        } else {
+          s.classification = 'Average'; // Rata-rata
+        }
+      });
+
+      return {
+        stats,
+        mutualPairs,
+        maxScore,
+        avgScore,
+        maxPossibleScore,
+        studentCount: n,
+        respondentCount: Object.keys(choices).length
+      };
+    }
+
+    // ==========================================
+    // 5. TAB 1: LOGIKA FORM ANGKET & VALIDASI
+    // ==========================================
+    function renderFormAngketOptions() {
+      const selectPemilih = document.getElementById('inputPemilih');
+      if (!selectPemilih) return;
+
+      const currentVal = selectPemilih.value;
+      selectPemilih.innerHTML = '<option value="">-- Pilih Nama Kamu --</option>';
+
+      AppState.students.forEach(s => {
+        const isFilled = !!AppState.choices[s.id];
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = `${s.nama} (${s.gender}) ${isFilled ? '✓ (Sudah Mengisi)' : '• (Belum Mengisi)'}`;
+        selectPemilih.appendChild(opt);
+      });
+
+      if (currentVal && AppState.students.some(s => s.id === currentVal)) {
+        selectPemilih.value = currentVal;
+      }
+      handlePemilihChange();
+      updateAngketProgress();
+    }
+
+    function handlePemilihChange() {
+      const pemilihId = document.getElementById('inputPemilih').value;
+      const selectP1 = document.getElementById('inputPilihan1');
+      const selectP2 = document.getElementById('inputPilihan2');
+      const selectP3 = document.getElementById('inputPilihan3');
+      const inputAlasan = document.getElementById('inputAlasan');
+      const noteEl = document.getElementById('pemilihStatusNote');
+
+      // Populate options for P1, P2, P3 excluding pemilih
+      [selectP1, selectP2, selectP3].forEach((sel, idx) => {
+        const prev = sel.value;
+        sel.innerHTML = `<option value="">-- Pilih Teman Pilihan ${idx + 1}${idx === 2 ? ' (Opsional)' : ''} --</option>`;
+        AppState.students.forEach(s => {
+          if (s.id !== pemilihId) {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = `${s.nama} (${s.gender})`;
+            sel.appendChild(opt);
+          }
+        });
+        sel.value = prev;
+      });
+
+      // Jika siswa ini sudah pernah mengisi, muat data sebelumnya untuk diedit
+      if (pemilihId && AppState.choices[pemilihId]) {
+        const existing = AppState.choices[pemilihId];
+        selectP1.value = existing.p1 || '';
+        selectP2.value = existing.p2 || '';
+        selectP3.value = existing.p3 || '';
+        inputAlasan.value = existing.alasan || '';
+        if (noteEl) noteEl.innerHTML = `<span class="text-blue-600 font-medium">✓ Siswa ini telah mengisi data sebelumnya. Anda sedang dalam mode memperbarui (edit) pilihan.</span>`;
+      } else {
+        if (noteEl) noteEl.innerText = pemilihId ? "Siswa belum mengisi. Silakan pilih 3 teman." : "";
+        selectP1.value = '';
+        selectP2.value = '';
+        selectP3.value = '';
+        inputAlasan.value = '';
+      }
+
+      validatePilihanUnik();
+    }
+
+    function validatePilihanUnik() {
+      const pemilihId = document.getElementById('inputPemilih').value;
+      const p1 = document.getElementById('inputPilihan1').value;
+      const p2 = document.getElementById('inputPilihan2').value;
+      const p3 = document.getElementById('inputPilihan3').value;
+      const alertBox = document.getElementById('formValidationAlert');
+      const alertText = document.getElementById('formValidationText');
+      const btnSubmit = document.getElementById('btnSubmitAngket');
+
+      if (!pemilihId) {
+        alertBox.classList.add('hidden');
+        btnSubmit.disabled = false;
+        return true;
+      }
+
+      // Cek memilih diri sendiri
+      if (p1 === pemilihId || p2 === pemilihId || p3 === pemilihId) {
+        alertBox.classList.remove('hidden');
+        alertText.innerText = "Siswa tidak diperkenankan memilih namanya sendiri!";
+        btnSubmit.disabled = true;
+        return false;
+      }
+
+      // Cek duplikasi pilihan
+      const selected = [p1, p2, p3].filter(Boolean);
+      const unique = new Set(selected);
+      if (selected.length !== unique.size) {
+        alertBox.classList.remove('hidden');
+        alertText.innerText = "Tidak boleh memilih orang yang sama pada lebih dari satu pilihan!";
+        btnSubmit.disabled = true;
+        return false;
+      }
+
+      alertBox.classList.add('hidden');
+      btnSubmit.disabled = false;
+      return true;
+    }
+
+    function handleSimpanPilihan(e) {
+      e.preventDefault();
+      const pemilihId = document.getElementById('inputPemilih').value;
+      const p1 = document.getElementById('inputPilihan1').value;
+      const p2 = document.getElementById('inputPilihan2').value;
+      const p3 = document.getElementById('inputPilihan3').value;
+      const alasan = document.getElementById('inputAlasan').value.trim();
+
+      if (!pemilihId) {
+        showToast("Pilih nama Anda terlebih dahulu!", "warning");
+        return;
+      }
+
+      if (!validatePilihanUnik()) {
+        showToast("Periksa validasi pilihan Anda!", "error");
+        return;
+      }
+
+      if (!p1 || !p2) {
+        showToast("Pilihan 1 dan Pilihan 2 wajib diisi!", "warning");
+        return;
+      }
+
+      AppState.choices[pemilihId] = {
+        p1: p1,
+        p2: p2,
+        p3: p3 || null,
+        alasan: alasan,
+        timestamp: new Date().toISOString()
+      };
+
+      saveStateToStorage();
+      showToast(`Pilihan sosiometri untuk "${getStudentName(pemilihId)}" berhasil disimpan!`, "success");
+      
+      // Update antarmuka
+      renderFormAngketOptions();
+      renderStatusPengisianList();
+      updateAngketProgress();
+    }
+
+    function resetFormAngket() {
+      document.getElementById('formSosiometri').reset();
+      handlePemilihChange();
+    }
+
+    function updateAngketProgress() {
+      const total = AppState.students.length;
+      const filled = Object.keys(AppState.choices).length;
+      const percent = total > 0 ? Math.round((filled / total) * 100) : 0;
+
+      const pBar = document.getElementById('angketProgressBar');
+      const pText = document.getElementById('angketProgressPercent');
+      const pDetail = document.getElementById('angketProgressDetail');
+      const bBelum = document.getElementById('badgeBelumMengisi');
+
+      if (pBar) pBar.style.width = `${percent}%`;
+      if (pText) pText.innerText = `${percent}%`;
+      if (pDetail) pDetail.innerText = `${filled} dari ${total} siswa telah mengisi`;
+      if (bBelum) bBelum.innerText = `${total - filled} Belum Mengisi`;
+    }
+
+    function renderStatusPengisianList() {
+      const container = document.getElementById('statusPengisianContainer');
+      const search = (document.getElementById('searchAngketSiswa')?.value || '').toLowerCase();
+      if (!container) return;
+
+      container.innerHTML = '';
+      if (AppState.students.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 text-slate-400">
+            <p class="text-xs">Belum ada siswa terdaftar.</p>
+            <button onclick="switchTab('manajemen')" class="mt-2 text-xs text-brand-600 font-semibold underline">Tambah Siswa Sekarang</button>
+          </div>
+        `;
+        return;
+      }
+
+      const filtered = AppState.students.filter(s => s.nama.toLowerCase().includes(search));
+
+      filtered.forEach((s, idx) => {
+        const choice = AppState.choices[s.id];
+        const isFilled = !!choice;
+
+        const item = document.createElement('div');
+        item.className = `p-3 rounded-xl border transition flex items-center justify-between text-xs ${
+          isFilled ? 'bg-slate-50 border-slate-200' : 'bg-amber-50/40 border-amber-200/80'
+        }`;
+
+        let detailText = '';
+        if (isFilled) {
+          const names = [getStudentName(choice.p1), getStudentName(choice.p2), getStudentName(choice.p3)].filter(Boolean);
+          detailText = `<p class="text-[11px] text-slate-500 truncate max-w-[200px]">Memilih: ${names.join(', ')}</p>`;
+        } else {
+          detailText = `<p class="text-[11px] text-amber-700 font-medium">Belum memberikan pilihan</p>`;
+        }
+
+        item.innerHTML = `
+          <div class="flex items-center space-x-2.5 overflow-hidden">
+            <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+              s.gender === 'L' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'
+            }">${s.gender}</span>
+            <div class="truncate">
+              <span class="font-bold text-slate-800">${s.nama}</span>
+              ${detailText}
+            </div>
+          </div>
+          <div class="flex items-center space-x-1 shrink-0">
+            <button onclick="pilihSiswaUntukInput('${s.id}')" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
+              isFilled ? 'bg-slate-200 hover:bg-slate-300 text-slate-700' : 'bg-brand-700 hover:bg-brand-800 text-white'
+            }">
+              ${isFilled ? 'Edit' : 'Input'}
+            </button>
+            ${isFilled ? `
+              <button onclick="hapusResponSiswa('${s.id}')" title="Hapus Respon" class="p-1 text-slate-400 hover:text-rose-600 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            ` : ''}
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function pilihSiswaUntukInput(studentId) {
+      const select = document.getElementById('inputPemilih');
+      if (select) {
+        select.value = studentId;
+        handlePemilihChange();
+        select.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    function hapusResponSiswa(studentId) {
+      if (confirm(`Hapus respon sosiometri untuk "${getStudentName(studentId)}"?`)) {
+        delete AppState.choices[studentId];
+        saveStateToStorage();
+        showToast("Respon berhasil dihapus", "info");
+        renderFormAngketOptions();
+        renderStatusPengisianList();
+        updateAngketProgress();
+      }
+    }
+
+    function getStudentName(id) {
+      if (!id) return '';
+      const s = AppState.students.find(st => st.id === id);
+      return s ? s.nama : id;
+    }
+
+    // ==========================================
+    // 6. TAB 2: SOSIOGRAM (VIS.JS NETWORK)
+    // ==========================================
+    let networkInstance = null;
+    let isPhysicsActive = true;
+
+    function renderSosiogramGraph() {
+      const container = document.getElementById('sosiogramNetwork');
+      if (!container) return;
+
+      if (AppState.students.length === 0) {
+        container.innerHTML = `
+          <div class="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
+            <p class="text-sm font-semibold">Belum ada data siswa.</p>
+            <p class="text-xs text-slate-400 mt-1">Muat data demo di tab Manajemen Siswa untuk melihat Sosiogram.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const mode = document.getElementById('filterGraphMode')?.value || 'all';
+      const genderFilter = document.getElementById('filterGraphGender')?.value || 'all';
+
+      const metrics = calculateSociometryMetrics();
+      const nodesData = [];
+      const edgesData = [];
+
+      // Siapkan Nodes
+      AppState.students.forEach(s => {
+        if (genderFilter !== 'all' && s.gender !== genderFilter) return;
+
+        const stat = metrics.stats[s.id] || { totalChoicesReceived: 0, weightedScore: 0, classification: 'Average' };
+        
+        // Penentuan Warna berdasarkan status
+        let bgColor = '#3b82f6'; // Average default blue
+        let borderColor = '#1d4ed8';
+        let fontColor = '#ffffff';
+
+        if (stat.classification === 'Star') {
+          bgColor = '#f59e0b'; // Amber Gold
+          borderColor = '#b45309';
+          fontColor = '#ffffff';
+        } else if (stat.classification === 'Isolate') {
+          bgColor = '#f43f5e'; // Rose Pink
+          borderColor = '#be123c';
+          fontColor = '#ffffff';
+        } else if (stat.classification === 'Neglected') {
+          bgColor = '#94a3b8'; // Slate Gray
+          borderColor = '#475569';
+          fontColor = '#ffffff';
+        }
+
+        // Ukuran node membesar sesuai skor (min 20, max 42)
+        const nodeSize = Math.max(20, Math.min(42, 20 + stat.weightedScore * 2.2));
+
+        // Format label
+        const shortName = s.nama.split(' ')[0] + (s.nama.split(' ')[1] ? ' ' + s.nama.split(' ')[1][0] + '.' : '');
+
+        nodesData.push({
+          id: s.id,
+          label: `${shortName}\n(${stat.totalChoicesReceived}p | ${stat.weightedScore}s)`,
+          shape: 'dot',
+          size: nodeSize,
+          color: {
+            background: bgColor,
+            border: borderColor,
+            highlight: {
+              background: '#6366f1',
+              border: '#4338ca'
+            }
+          },
+          borderWidth: stat.classification === 'Star' ? 3 : 2,
+          font: {
+            color: '#1e293b',
+            size: 11,
+            face: 'Plus Jakarta Sans',
+            vadjust: 0
+          },
+          title: `${s.nama} (${s.gender})\nStatus: ${stat.classification}\nDipilih: ${stat.totalChoicesReceived} kali (Skor: ${stat.weightedScore})\nMutual: ${stat.mutualWith.length} orang`
+        });
+      });
+
+      // Filter Node IDs
+      const validNodeIds = new Set(nodesData.map(n => n.id));
+
+      // Siapkan Edges
+      const mutualPairKeys = new Set(metrics.mutualPairs.map(p => p.pairKey));
+      const addedMutualEdgeKeys = new Set();
+
+      AppState.students.forEach(chooser => {
+        if (!validNodeIds.has(chooser.id)) return;
+        const c = AppState.choices[chooser.id];
+        if (!c) return;
+
+        const relations = [
+          { target: c.p1, rank: 1, weight: 3 },
+          { target: c.p2, rank: 2, weight: 2 },
+          { target: c.p3, rank: 3, weight: 1 }
+        ].filter(r => r.target && validNodeIds.has(r.target));
+
+        relations.forEach(rel => {
+          const pairKey = [chooser.id, rel.target].sort().join('___');
+          const isMutual = mutualPairKeys.has(pairKey);
+
+          // Filter Mode logic
+          if (mode === 'mutual' && !isMutual) return;
+          if (mode === 'p1' && rel.rank !== 1) return;
+
+          if (isMutual) {
+            // Jika hubungan mutual, buat edge timbal balik yang tegas
+            if (!addedMutualEdgeKeys.has(pairKey)) {
+              addedMutualEdgeKeys.add(pairKey);
+              edgesData.push({
+                from: chooser.id,
+                to: rel.target,
+                arrows: {
+                  to: { enabled: true, scaleFactor: 0.8 },
+                  from: { enabled: true, scaleFactor: 0.8 }
+                },
+                color: { color: '#10b981', highlight: '#059669', opacity: 0.95 },
+                width: 3.5,
+                smooth: { type: 'continuous' },
+                title: `Mutual Choice (Saling Memilih)`
+              });
+            }
+          } else {
+            // Relasi satu arah biasa
+            const edgeColor = rel.rank === 1 ? '#3b82f6' : rel.rank === 2 ? '#60a5fa' : '#94a3b8';
+            edgesData.push({
+              from: chooser.id,
+              to: rel.target,
+              arrows: 'to',
+              color: { color: edgeColor, highlight: '#2563eb', opacity: 0.75 },
+              width: rel.rank === 1 ? 2.2 : rel.rank === 2 ? 1.6 : 1.0,
+              dashes: rel.rank === 3,
+              smooth: { type: 'curvedCW', roundness: 0.15 },
+              title: `${chooser.nama} -> ${getStudentName(rel.target)} (Pilihan ${rel.rank})`
+            });
+          }
+        });
+      });
+
+      const data = {
+        nodes: new vis.DataSet(nodesData),
+        edges: new vis.DataSet(edgesData)
+      };
+
+      const options = {
+        physics: {
+          enabled: isPhysicsActive,
+          solver: 'forceAtlas2Based',
+          forceAtlas2Based: {
+            gravitationalConstant: -45,
+            centralGravity: 0.008,
+            springLength: 130,
+            springConstant: 0.06,
+            damping: 0.4
+          },
+          stabilization: { iterations: 150 }
+        },
+        interaction: {
+          hover: true,
+          tooltipDelay: 150,
+          zoomView: true,
+          dragView: true
+        }
+      };
+
+      if (networkInstance) {
+        networkInstance.destroy();
+      }
+
+      networkInstance = new vis.Network(container, data, options);
+
+      // Event Klik Node untuk Inspector
+      networkInstance.on("click", function(params) {
+        if (params.nodes.length > 0) {
+          const selectedId = params.nodes[0];
+          renderNodeDetailCard(selectedId, metrics);
+        }
+      });
+    }
+
+    function toggleGraphPhysics() {
+      isPhysicsActive = !isPhysicsActive;
+      if (networkInstance) {
+        networkInstance.setOptions({ physics: { enabled: isPhysicsActive } });
+      }
+      const label = document.getElementById('physicsStatusLabel');
+      if (label) label.innerText = isPhysicsActive ? 'Fisika: ON' : 'Fisika: OFF';
+    }
+
+    function fitGraphView() {
+      if (networkInstance) {
+        networkInstance.fit({ animation: { duration: 500, easingFunction: 'easeInOutQuad' } });
+      }
+    }
+
+    function renderNodeDetailCard(studentId, metrics) {
+      const container = document.getElementById('nodeDetailContainer');
+      if (!container) return;
+
+      const stat = metrics.stats[studentId];
+      if (!stat) return;
+      const student = stat.student;
+
+      let badgeBg = 'bg-blue-100 text-blue-800';
+      if (stat.classification === 'Star') badgeBg = 'bg-amber-100 text-amber-800 font-bold';
+      if (stat.classification === 'Isolate') badgeBg = 'bg-rose-100 text-rose-800 font-bold';
+      if (stat.classification === 'Neglected') badgeBg = 'bg-slate-100 text-slate-800';
+
+      let chosenByHtml = '';
+      if (stat.chosenBy.length === 0) {
+        chosenByHtml = '<p class="text-xs text-rose-600 italic">Tidak ada siswa yang memilih.</p>';
+      } else {
+        chosenByHtml = stat.chosenBy.map(c => `
+          <div class="flex items-center justify-between py-1 border-b border-slate-100 text-xs">
+            <span class="font-medium text-slate-800">${c.chooserName}</span>
+            <span class="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">Pilihan ${c.rank} (+${c.weight})</span>
+          </div>
+        `).join('');
+      }
+
+      let chosenListHtml = '';
+      if (stat.chosenList.length === 0) {
+        chosenListHtml = '<p class="text-xs text-amber-600 italic">Belum mengisi angket pemilihan.</p>';
+      } else {
+        chosenListHtml = stat.chosenList.map(c => `
+          <div class="flex items-center justify-between py-1 border-b border-slate-100 text-xs">
+            <span class="font-medium text-slate-800">${c.targetName}</span>
+            <span class="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">Pilihan ${c.rank}</span>
+          </div>
+        `).join('');
+      }
+
+      let mutualHtml = '';
+      if (stat.mutualWith.length === 0) {
+        mutualHtml = '<p class="text-xs text-slate-400">Belum ada mutual choice.</p>';
+      } else {
+        mutualHtml = stat.mutualWith.map(mId => `
+          <span class="inline-block bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold px-2 py-0.5 rounded-md mr-1 mb-1">
+            ⇄ ${getStudentName(mId)}
+          </span>
+        `).join('');
+      }
+
+      container.innerHTML = `
+        <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
+          <div class="flex items-start justify-between">
+            <div>
+              <h4 class="text-base font-bold text-slate-900">${student.nama}</h4>
+              <p class="text-xs text-slate-500">Jenis Kelamin: ${student.gender === 'L' ? 'Laki-laki' : 'Perempuan'}</p>
+            </div>
+            <span class="text-xs px-2.5 py-1 rounded-full ${badgeBg}">${stat.classification}</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 text-center text-xs">
+            <div class="bg-white p-2 rounded-lg border border-slate-200">
+              <span class="text-slate-400 block text-[10px]">Dipilih (F)</span>
+              <span class="font-bold text-slate-800 text-sm">${stat.totalChoicesReceived}x</span>
+            </div>
+            <div class="bg-white p-2 rounded-lg border border-slate-200">
+              <span class="text-slate-400 block text-[10px]">Skor (W)</span>
+              <span class="font-bold text-slate-800 text-sm">${stat.weightedScore}</span>
+            </div>
+            <div class="bg-white p-2 rounded-lg border border-slate-200">
+              <span class="text-slate-400 block text-[10px]">Indeks CS</span>
+              <span class="font-bold text-brand-700 text-sm">${stat.choiceStatusIndex}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <h5 class="text-xs font-bold text-emerald-800 flex items-center space-x-1">
+            <span>⇄ Hubungan Timbal Balik (${stat.mutualWith.length})</span>
+          </h5>
+          <div>${mutualHtml}</div>
+        </div>
+
+        <div class="space-y-2">
+          <h5 class="text-xs font-bold text-slate-700">Dipilih Oleh (${stat.chosenBy.length} Siswa):</h5>
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">${chosenByHtml}</div>
+        </div>
+
+        <div class="space-y-2">
+          <h5 class="text-xs font-bold text-slate-700">Memilih (${stat.chosenList.length} Teman):</h5>
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">${chosenListHtml}</div>
+        </div>
+      `;
+    }
+
+    // ==========================================
+    // 7. TAB 3: MATRIKS SOSIOMETRI (N x N)
+    // ==========================================
+    function renderMatrixTable() {
+      const table = document.getElementById('matrixTable');
+      if (!table) return;
+
+      const students = AppState.students;
+      const choices = AppState.choices;
+      const n = students.length;
+
+      if (n === 0) {
+        table.innerHTML = `<tr><td class="p-8 text-center text-slate-400">Belum ada data siswa terdaftar.</td></tr>`;
+        return;
+      }
+
+      const metrics = calculateSociometryMetrics();
+      const mutualKeys = new Set(metrics.mutualPairs.map(p => p.pairKey));
+
+      let html = '';
+
+      // THEAD: Header Kolom Yang Dipilih
+      html += `<thead class="bg-slate-100 text-slate-700 sticky top-0 z-20 border-b border-slate-300">`;
+      html += `<tr>`;
+      html += `<th class="p-2 border border-slate-200 bg-slate-200 w-10 sticky left-0 z-30">No</th>`;
+      html += `<th class="p-2 border border-slate-200 bg-slate-200 min-w-[140px] text-left sticky left-10 z-30">Pemilih \\ Yang Dipilih</th>`;
+
+      students.forEach((s, idx) => {
+        const short = s.nama.split(' ')[0];
+        html += `<th class="p-2 border border-slate-200 min-w-[42px] max-w-[60px] truncate font-semibold" title="${s.nama} (${s.gender})">${idx + 1}<br><span class="text-[10px] font-normal text-slate-500">${short}</span></th>`;
+      });
+
+      html += `<th class="p-2 border border-slate-300 bg-blue-50 font-bold w-12 text-blue-900" title="Jumlah Siswa yang Dipilih">Pilihan Diberikan</th>`;
+      html += `</tr></thead>`;
+
+      // TBODY: Baris-baris Pemilih
+      html += `<tbody class="divide-y divide-slate-200">`;
+      students.forEach((rowStudent, rIdx) => {
+        const c = choices[rowStudent.id];
+        let countGiven = 0;
+
+        html += `<tr class="hover:bg-slate-50 transition">`;
+        html += `<td class="p-2 border border-slate-200 bg-slate-100 font-bold sticky left-0 z-10 text-center">${rIdx + 1}</td>`;
+        html += `<td class="p-2 border border-slate-200 bg-slate-50 font-semibold text-left sticky left-10 z-10 truncate max-w-[160px] text-slate-800" title="${rowStudent.nama}">
+          ${rowStudent.nama} <span class="text-[10px] text-slate-400">(${rowStudent.gender})</span>
+        </td>`;
+
+        students.forEach((colStudent, cIdx) => {
+          if (rowStudent.id === colStudent.id) {
+            // Diagonal (Diri sendiri)
+            html += `<td class="p-2 border border-slate-200 bg-slate-200/80 text-slate-400 font-mono font-bold">-</td>`;
+          } else {
+            let val = '';
+            let weight = 0;
+            let isMutual = false;
+
+            if (c) {
+              if (c.p1 === colStudent.id) { val = '3'; weight = 3; countGiven++; }
+              else if (c.p2 === colStudent.id) { val = '2'; weight = 2; countGiven++; }
+              else if (c.p3 === colStudent.id) { val = '1'; weight = 1; countGiven++; }
+            }
+
+            const pairKey = [rowStudent.id, colStudent.id].sort().join('___');
+            if (val && mutualKeys.has(pairKey)) {
+              isMutual = true;
+            }
+
+            if (val) {
+              const bgClass = isMutual ? 'bg-emerald-100 font-extrabold text-emerald-900 border-emerald-300' :
+                              weight === 3 ? 'bg-blue-100/70 font-bold text-blue-800' :
+                              weight === 2 ? 'bg-blue-50 font-semibold text-blue-700' :
+                              'bg-slate-50 text-slate-600';
+              html += `<td class="p-2 border border-slate-200 ${bgClass}" title="${rowStudent.nama} -> ${colStudent.nama}: Pilihan (Bobot ${weight})${isMutual ? ' [MUTUAL]' : ''}">
+                ${val}${isMutual ? '⇄' : ''}
+              </td>`;
+            } else {
+              html += `<td class="p-2 border border-slate-200 text-slate-300">0</td>`;
+            }
+          }
+        });
+
+        html += `<td class="p-2 border border-slate-200 bg-slate-50 font-bold text-slate-700">${countGiven}</td>`;
+        html += `</tr>`;
+      });
+      html += `</tbody>`;
+
+      // TFOOT: Baris Rekapitulasi Statistik di Bagian Bawah Matriks
+      html += `<tfoot class="border-t-2 border-slate-300 font-semibold text-xs">`;
+      
+      // Baris Frekuensi P1
+      html += `<tr class="bg-blue-50/40 text-blue-900">`;
+      html += `<td class="p-2 border border-slate-200 text-center sticky left-0 bg-blue-100 z-10" colspan="2">Jumlah Pilihan 1 (P1)</td>`;
+      students.forEach(s => {
+        html += `<td class="p-2 border border-slate-200 font-bold text-blue-800">${metrics.stats[s.id].p1Count}</td>`;
+      });
+      html += `<td class="p-2 border border-slate-200 font-bold">-</td></tr>`;
+
+      // Baris Frekuensi P2
+      html += `<tr class="bg-indigo-50/40 text-indigo-900">`;
+      html += `<td class="p-2 border border-slate-200 text-center sticky left-0 bg-indigo-100 z-10" colspan="2">Jumlah Pilihan 2 (P2)</td>`;
+      students.forEach(s => {
+        html += `<td class="p-2 border border-slate-200 font-bold text-indigo-800">${metrics.stats[s.id].p2Count}</td>`;
+      });
+      html += `<td class="p-2 border border-slate-200 font-bold">-</td></tr>`;
+
+      // Baris Frekuensi P3
+      html += `<tr class="bg-slate-50 text-slate-800">`;
+      html += `<td class="p-2 border border-slate-200 text-center sticky left-0 bg-slate-200 z-10" colspan="2">Jumlah Pilihan 3 (P3)</td>`;
+      students.forEach(s => {
+        html += `<td class="p-2 border border-slate-200 font-bold text-slate-700">${metrics.stats[s.id].p3Count}</td>`;
+      });
+      html += `<td class="p-2 border border-slate-200 font-bold">-</td></tr>`;
+
+      // Baris Total Frekuensi (F)
+      html += `<tr class="bg-slate-100 text-slate-900 font-bold">`;
+      html += `<td class="p-2 border border-slate-300 text-center sticky left-0 bg-slate-200 z-10" colspan="2">Total Frekuensi Pilihan (F)</td>`;
+      students.forEach(s => {
+        html += `<td class="p-2 border border-slate-300 font-black text-slate-900 bg-slate-100">${metrics.stats[s.id].totalChoicesReceived}</td>`;
+      });
+      html += `<td class="p-2 border border-slate-300 font-bold">-</td></tr>`;
+
+      // Baris Skor Berbobot (W)
+      html += `<tr class="bg-brand-50 text-brand-950 font-bold">`;
+      html += `<td class="p-2 border border-brand-200 text-center sticky left-0 bg-brand-100 z-10" colspan="2">Skor Berbobot (W)</td>`;
+      students.forEach(s => {
+        html += `<td class="p-2 border border-brand-200 font-black text-brand-900 bg-brand-50">${metrics.stats[s.id].weightedScore}</td>`;
+      });
+      html += `<td class="p-2 border border-brand-200 font-bold">-</td></tr>`;
+
+      // Baris Indeks Status Sosiometri (CS)
+      html += `<tr class="bg-blue-100/70 text-blue-950 font-bold">`;
+      html += `<td class="p-2 border border-blue-300 text-center sticky left-0 bg-blue-200 z-10" colspan="2">Indeks Sosiometri (CS)</td>`;
+      students.forEach(s => {
+        html += `<td class="p-2 border border-blue-300 font-black text-blue-900 font-mono">${metrics.stats[s.id].choiceStatusIndex}</td>`;
+      });
+      html += `<td class="p-2 border border-blue-300 font-bold">-</td></tr>`;
+
+      // Baris Status Sosiometri
+      html += `<tr class="bg-slate-200 text-slate-900 font-bold text-[11px]">`;
+      html += `<td class="p-2 border border-slate-300 text-center sticky left-0 bg-slate-300 z-10" colspan="2">Klasifikasi Status</td>`;
+      students.forEach(s => {
+        const cls = metrics.stats[s.id].classification;
+        const color = cls === 'Star' ? 'text-amber-800 bg-amber-100' :
+                      cls === 'Isolate' ? 'text-rose-800 bg-rose-100' :
+                      cls === 'Neglected' ? 'text-slate-600 bg-slate-100' :
+                      'text-blue-800 bg-blue-50';
+        html += `<td class="p-1 border border-slate-300 ${color} font-extrabold uppercase text-[10px]">${cls}</td>`;
+      });
+      html += `<td class="p-2 border border-slate-300">-</td></tr>`;
+
+      html += `</tfoot>`;
+      table.innerHTML = html;
+    }
+
+    function exportMatrixToCSV() {
+      const students = AppState.students;
+      const choices = AppState.choices;
+      if (students.length === 0) {
+        showToast("Tidak ada data untuk diekspor!", "warning");
+        return;
+      }
+
+      let csv = 'No,Nama Siswa,Gender,' + students.map(s => `"${s.nama.replace(/"/g, '""')}"`).join(',') + ',Total Pilihan Diberikan\n';
+
+      students.forEach((row, idx) => {
+        const c = choices[row.id];
+        let givenCount = 0;
+        const rowVals = students.map(col => {
+          if (row.id === col.id) return '-';
+          if (!c) return '0';
+          if (c.p1 === col.id) { givenCount++; return '3'; }
+          if (c.p2 === col.id) { givenCount++; return '2'; }
+          if (c.p3 === col.id) { givenCount++; return '1'; }
+          return '0';
+        });
+
+        csv += `${idx + 1},"${row.nama.replace(/"/g, '""')}",${row.gender},${rowVals.join(',')},${givenCount}\n`;
+      });
+
+      const metrics = calculateSociometryMetrics();
+      csv += `\nTotal Frekuensi Pilihan (F),,,` + students.map(s => metrics.stats[s.id].totalChoicesReceived).join(',') + ',\n';
+      csv += `Skor Berbobot (W),,,` + students.map(s => metrics.stats[s.id].weightedScore).join(',') + ',\n';
+      csv += `Indeks Sosiometri (CS),,,` + students.map(s => metrics.stats[s.id].choiceStatusIndex).join(',') + ',\n';
+      csv += `Status Sosiometri,,,` + students.map(s => metrics.stats[s.id].classification).join(',') + ',\n';
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `matriks_sosiometri_${AppState.meta.kelas || 'kelas'}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("File Matriks CSV berhasil diunduh", "success");
+    }
+
+    // ==========================================
+    // 8. TAB 4: LAPORAN RESMI & REKOMENDASI BK
+    // ==========================================
+    function renderLaporanPage() {
+      const meta = AppState.meta;
+      const metrics = calculateSociometryMetrics();
+
+      // Sinkronisasi Kop & Metadata
+      document.getElementById('kopNamaSekolah').innerText = meta.namaSekolah || 'SMA NEGERI 1 INDONESIA';
+      document.getElementById('repKelas').innerText = meta.kelas || '-';
+      document.getElementById('repSemesterTahun').innerText = `${meta.semester || '-'} / ${meta.tahunAjaran || '-'}`;
+      document.getElementById('repKriteria').innerText = meta.kriteria || 'Teman Belajar Kelompok';
+      document.getElementById('repTanggal').innerText = formatDateIndonesia(meta.tanggalAsesmen);
+
+      // Statistik Utama
+      document.getElementById('repStatTotalSiswa').innerText = `${metrics.studentCount} Siswa`;
+      const partPercent = metrics.studentCount > 0 ? Math.round((metrics.respondentCount / metrics.studentCount) * 100) : 0;
+      document.getElementById('repStatPartisipasi').innerText = `${partPercent}%`;
+      document.getElementById('repStatMutualPairs').innerText = `${metrics.mutualPairs.length} Pasangan`;
+
+      const isolates = Object.values(metrics.stats).filter(s => s.classification === 'Isolate');
+      document.getElementById('repStatIsolateCount').innerText = `${isolates.length} Siswa`;
+
+      // Tabel Status Sosiometri
+      const tbody = document.getElementById('repTableBody');
+      tbody.innerHTML = '';
+
+      const sortedList = Object.values(metrics.stats).sort((a, b) => b.weightedScore - a.weightedScore);
+
+      sortedList.forEach((stat, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 transition';
+
+        let badgeClass = 'text-blue-800 bg-blue-50';
+        if (stat.classification === 'Star') badgeClass = 'text-amber-800 bg-amber-100 font-bold';
+        if (stat.classification === 'Isolate') badgeClass = 'text-rose-800 bg-rose-100 font-bold';
+        if (stat.classification === 'Neglected') badgeClass = 'text-slate-600 bg-slate-100';
+
+        tr.innerHTML = `
+          <td class="p-2.5 text-center font-bold text-slate-600">${idx + 1}</td>
+          <td class="p-2.5 font-semibold text-slate-800">${stat.student.nama}</td>
+          <td class="p-2.5 text-center">${stat.student.gender}</td>
+          <td class="p-2.5 text-center text-blue-700">${stat.p1Count}</td>
+          <td class="p-2.5 text-center text-indigo-700">${stat.p2Count}</td>
+          <td class="p-2.5 text-center text-slate-600">${stat.p3Count}</td>
+          <td class="p-2.5 text-center font-bold text-slate-900">${stat.totalChoicesReceived}</td>
+          <td class="p-2.5 text-center font-bold text-brand-700">${stat.weightedScore}</td>
+          <td class="p-2.5 text-center font-mono font-semibold">${stat.choiceStatusIndex}</td>
+          <td class="p-2.5 text-center">
+            <span class="px-2 py-0.5 rounded text-[10px] uppercase ${badgeClass}">${stat.classification}</span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Temuan Khusus Star & Isolate
+      const stars = sortedList.filter(s => s.classification === 'Star');
+      const starEl = document.getElementById('repStarDesc');
+      if (stars.length > 0) {
+        const starNames = stars.map(s => `<strong>${s.student.nama}</strong> (Skor: ${s.weightedScore})`).join(', ');
+        starEl.innerHTML = `Siswa dengan penerimaan sosial tertinggi di kelas adalah ${starNames}. Mereka memiliki pengaruh positif besar dalam kelompok dan dipercaya teman sekelas.`;
+      } else {
+        starEl.innerText = "Distribusi pilihan relatif merata; tidak terdapat individu yang mendominasi pilihan secara ekstrem.";
+      }
+
+      const isolateEl = document.getElementById('repIsolateDesc');
+      if (isolates.length > 0) {
+        const isoNames = isolates.map(s => `<strong>${s.student.nama}</strong>`).join(', ');
+        isolateEl.innerHTML = `Terdeteksi ${isolates.length} siswa yang tidak mendapatkan pilihan sama sekali: ${isoNames}. Berisiko mengalami penarikan diri sosial atau hambatan relasi yang membutuhkan intervensi guru BK.`;
+      } else {
+        isolateEl.innerText = "Kabar baik: Semua siswa di kelas ini mendapatkan setidaknya 1 pilihan dari teman-temannya. Tidak ada siswa yang terisolir secara mutlak.";
+      }
+
+      // Rekomendasi Kelompok Belajar Seimbang
+      renderKelompokBelajar();
+
+      // Tanda Tangan
+      document.getElementById('repKepalaSekolah').innerText = meta.kepalaSekolah || '-';
+      document.getElementById('repNipKepsek').innerText = meta.nipKepsek ? `NIP. ${meta.nipKepsek}` : '';
+      document.getElementById('repGuruBK').innerText = meta.guruBK || '-';
+      document.getElementById('repNipGuru').innerText = meta.nipGuru ? `NIP. ${meta.nipGuru}` : '';
+      document.getElementById('repKotaTanggal').innerText = `${meta.kota || 'Jakarta'}, ${formatDateIndonesia(meta.tanggalAsesmen)}`;
+    }
+
+    // Algoritma Otomatis Pembagian Kelompok Belajar Seimbang (Anti-Klik)
+    function renderKelompokBelajar() {
+      const k = parseInt(document.getElementById('selectJumlahKelompok')?.value || '3', 10);
+      const container = document.getElementById('rekomendasiKelompokContainer');
+      if (!container) return;
+
+      const students = AppState.students;
+      if (students.length === 0) {
+        container.innerHTML = `<p class="col-span-full text-center text-slate-400">Belum ada data siswa.</p>`;
+        return;
+      }
+
+      const metrics = calculateSociometryMetrics();
+      const sorted = Object.values(metrics.stats).sort((a, b) => b.weightedScore - a.weightedScore);
+
+      // Inisialisasi k kelompok
+      const groups = Array.from({ length: k }, (_, i) => ({
+        id: i + 1,
+        nama: `Kelompok ${i + 1}`,
+        members: []
+      }));
+
+      // Pisahkan kategori
+      const stars = sorted.filter(s => s.classification === 'Star');
+      const isolates = sorted.filter(s => s.classification === 'Isolate');
+      const others = sorted.filter(s => s.classification !== 'Star' && s.classification !== 'Isolate');
+
+      // 1. Distribusikan Siswa Populer (Star) sebagai jangkar/poros di kelompok berbeda
+      stars.forEach((st, idx) => {
+        groups[idx % k].members.push({ ...st, role: 'Ketua / Poros Diskusi' });
+      });
+
+      // 2. Tempatkan Siswa Terisolir (Isolate) ke dalam kelompok yang sudah ada Star/anggota suportif
+      isolates.forEach((iso, idx) => {
+        // Taruh di kelompok yang anggotanya paling sedikit
+        groups.sort((a, b) => a.members.length - b.members.length);
+        groups[0].members.push({ ...iso, role: 'Fokus Pendampingan' });
+      });
+
+      // 3. Masukkan sisa siswa secara bergantian untuk menjaga keseimbangan gender
+      others.forEach((oth) => {
+        groups.sort((a, b) => a.members.length - b.members.length);
+        groups[0].members.push({ ...oth, role: 'Anggota Aktif' });
+      });
+
+      // Render Cards Kelompok
+      container.innerHTML = '';
+      groups.forEach(grp => {
+        const card = document.createElement('div');
+        card.className = 'p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2';
+
+        const memberListHtml = grp.members.map((m, mIdx) => {
+          let roleBadge = '';
+          if (m.classification === 'Star') roleBadge = `<span class="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.2 rounded ml-1">Star</span>`;
+          if (m.classification === 'Isolate') roleBadge = `<span class="text-[9px] bg-rose-100 text-rose-800 font-bold px-1.5 py-0.2 rounded ml-1">Isolate</span>`;
+
+          return `
+            <li class="flex items-center justify-between py-1 border-b border-slate-100 text-xs">
+              <span class="text-slate-800 font-medium">${mIdx + 1}. ${m.student.nama} <span class="text-slate-400">(${m.student.gender})</span> ${roleBadge}</span>
+            </li>
+          `;
+        }).join('');
+
+        const countL = grp.members.filter(m => m.student.gender === 'L').length;
+        const countP = grp.members.filter(m => m.student.gender === 'P').length;
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between pb-1.5 border-b border-slate-200">
+            <h5 class="font-bold text-slate-900">${grp.nama}</h5>
+            <span class="text-[11px] font-semibold text-slate-500">${grp.members.length} Siswa (${countL}L / ${countP}P)</span>
+          </div>
+          <ul class="space-y-0.5">${memberListHtml}</ul>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // ==========================================
+    // 9. TAB 5: MANAJEMEN SISWA & BACKUP DATA
+    // ==========================================
+    function handleTambahSiswaSatu(e) {
+      e.preventDefault();
+      const namaInput = document.getElementById('inputNamaTunggal');
+      const nama = namaInput.value.trim();
+      const gender = document.querySelector('input[name="genderTunggal"]:checked')?.value || 'L';
+
+      if (!nama) return;
+
+      // Cek apakah nama sudah ada
+      if (AppState.students.some(s => s.nama.toLowerCase() === nama.toLowerCase())) {
+        showToast("Nama siswa sudah terdaftar!", "warning");
+        return;
+      }
+
+      const newId = 's_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+      AppState.students.push({
+        id: newId,
+        nama: nama,
+        gender: gender
+      });
+
+      saveStateToStorage();
+      namaInput.value = '';
+      showToast(`Siswa "${nama}" berhasil ditambahkan!`, "success");
+      renderTabelSiswaManajemen();
+    }
+
+    function handleTambahSiswaBatch() {
+      const textarea = document.getElementById('inputBatchNama');
+      const text = textarea.value.trim();
+      const defaultGenderOpt = document.getElementById('batchDefaultGender').value;
+
+      if (!text) {
+        showToast("Masukkan daftar nama siswa terlebih dahulu!", "warning");
+        return;
+      }
+
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      let addedCount = 0;
+
+      lines.forEach((line, idx) => {
+        let gender = 'L';
+        let nama = line;
+
+        // Cek jika baris memiliki format seperti "Ahmad (L)" atau "Citra, P"
+        const match = line.match(/^(.*?)[,\s\t]*[\(\[]?([LlPp])[\)\]]?$/);
+        if (match) {
+          nama = match[1].trim();
+          gender = match[2].toUpperCase();
+        } else {
+          if (defaultGenderOpt === 'L') gender = 'L';
+          else if (defaultGenderOpt === 'P') gender = 'P';
+          else gender = idx % 2 === 0 ? 'L' : 'P'; // default selang-seling jika auto
+        }
+
+        if (nama && !AppState.students.some(s => s.nama.toLowerCase() === nama.toLowerCase())) {
+          AppState.students.push({
+            id: 's_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).substr(2, 4),
+            nama: nama,
+            gender: gender
+          });
+          addedCount++;
+        }
+      });
+
+      saveStateToStorage();
+      textarea.value = '';
+      showToast(`${addedCount} siswa baru berhasil ditambahkan secara serentak!`, "success");
+      renderTabelSiswaManajemen();
+    }
+
+    function renderTabelSiswaManajemen() {
+      const tbody = document.getElementById('tabelSiswaBody');
+      const badgeTotal = document.getElementById('badgeTotalSiswa');
+      const search = (document.getElementById('searchTabelSiswa')?.value || '').toLowerCase();
+      if (!tbody) return;
+
+      tbody.innerHTML = '';
+      if (badgeTotal) badgeTotal.innerText = `${AppState.students.length} Siswa`;
+
+      if (AppState.students.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400">Belum ada siswa yang ditambahkan. Silakan tambah satu per satu atau klik "Muat Data Demo".</td></tr>`;
+        return;
+      }
+
+      const filtered = AppState.students.filter(s => s.nama.toLowerCase().includes(search));
+
+      filtered.forEach((s, idx) => {
+        const isFilled = !!AppState.choices[s.id];
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 transition';
+
+        tr.innerHTML = `
+          <td class="p-3 text-center text-slate-500 font-medium">${idx + 1}</td>
+          <td class="p-3 font-semibold text-slate-800">${s.nama}</td>
+          <td class="p-3 text-center">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${s.gender === 'L' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}">${s.gender}</span>
+          </td>
+          <td class="p-3 text-center">
+            ${isFilled ?
+              `<span class="inline-flex items-center space-x-1 text-emerald-700 font-semibold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-[10px]">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                <span>Sudah</span>
+              </span>` :
+              `<span class="inline-flex items-center space-x-1 text-amber-700 font-semibold bg-amber-50 border border-amber-200 px-2 py-0.5 rounded text-[10px]">
+                <span>Belum</span>
+              </span>`
+            }
+          </td>
+          <td class="p-3 text-center">
+            <div class="flex items-center justify-center space-x-2">
+              <button onclick="bukaAngketSiswaDariManajemen('${s.id}')" title="Input/Edit Angket" class="p-1 text-blue-600 hover:text-blue-800 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+              </button>
+              <button onclick="hapusSiswa('${s.id}')" title="Hapus Siswa" class="p-1 text-rose-500 hover:text-rose-700 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function bukaAngketSiswaDariManajemen(id) {
+      switchTab('angket');
+      setTimeout(() => {
+        pilihSiswaUntukInput(id);
+      }, 50);
+    }
+
+    function hapusSiswa(studentId) {
+      const student = AppState.students.find(s => s.id === studentId);
+      if (!student) return;
+
+      if (confirm(`Yakin ingin menghapus siswa "${student.nama}"? Seluruh respon sosiometri terkait siswa ini juga akan dibersihkan.`)) {
+        // Hapus dari daftar siswa
+        AppState.students = AppState.students.filter(s => s.id !== studentId);
+        // Hapus pilihan yang dibuat siswa ini
+        delete AppState.choices[studentId];
+        // Bersihkan referensi pilihan orang lain ke siswa ini
+        Object.keys(AppState.choices).forEach(chooserId => {
+          const c = AppState.choices[chooserId];
+          if (c.p1 === studentId) c.p1 = null;
+          if (c.p2 === studentId) c.p2 = null;
+          if (c.p3 === studentId) c.p3 = null;
+        });
+
+        saveStateToStorage();
+        showToast(`Siswa "${student.nama}" berhasil dihapus`, "info");
+        renderTabelSiswaManajemen();
+      }
+    }
+
+    // ==========================================
+    // 10. BACKUP, RESTORE & DATA DEMO
+    // ==========================================
+    function backupDataJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(AppState, null, 2));
+      const downloadAnchor = document.createElement('a');
+      const filename = `sosiometri_bk_${(AppState.meta.kelas || 'kelas').replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.json`;
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", filename);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast("Cadangan file JSON berhasil diunduh!", "success");
+    }
+
+    function handleRestoreJSON(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        try {
+          const imported = JSON.parse(event.target.result);
+          if (imported && Array.isArray(imported.students)) {
+            if (confirm(`Pulihkan data dari file? Ini akan memperbarui data kelas "${imported.meta?.kelas || '-'}" dengan ${imported.students.length} siswa.`)) {
+              AppState = imported;
+              saveStateToStorage();
+              showToast("Data berhasil dipulihkan dari file JSON!", "success");
+              renderTabelSiswaManajemen();
+              syncHeaderDisplay();
+            }
+          } else {
+            showToast("Format file JSON tidak sesuai struktur Sosiometri BK!", "error");
+          }
+        } catch (err) {
+          showToast("Gagal membaca file JSON!", "error");
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    }
+
+    function confirmResetAllData() {
+      if (confirm("PERINGATAN: Apakah Anda yakin ingin MENGHAPUS SEMUA data siswa dan respon angket? Tindakan ini tidak dapat dibatalkan.")) {
+        AppState.students = [];
+        AppState.choices = {};
+        saveStateToStorage();
+        showToast("Seluruh data berhasil dikosongkan.", "info");
+        renderTabelSiswaManajemen();
+        syncHeaderDisplay();
+      }
+    }
+
+    // Muat Data Sampel / Demo Lengkap (12 Siswa Realistis dengan Star, Isolate, Mutual)
+    function loadSampleDemoData() {
+      const demoStudents = [
+        { id: "s1", nama: "Aditya Pratama", gender: "L" },
+        { id: "s2", nama: "Anisa Rahma", gender: "P" },
+        { id: "s3", nama: "Bagus Permadi", gender: "L" },
+        { id: "s4", nama: "Citra Lestari", gender: "P" },
+        { id: "s5", nama: "Dika Hendrawan", gender: "L" },
+        { id: "s6", nama: "Fania Maulida", gender: "P" },
+        { id: "s7", nama: "Farhan Hakim", gender: "L" },
+        { id: "s8", nama: "Gita Amanda", gender: "P" },
+        { id: "s9", nama: "Hafiz Ramadhan", gender: "L" },
+        { id: "s10", nama: "Indah Permata", gender: "P" },
+        { id: "s11", nama: "Kevin Sanjaya", gender: "L" },
+        { id: "s12", nama: "Laras Wulandari", gender: "P" }
+      ];
+
+      // Simulasi Dinamika:
+      // Star: Dika Hendrawan (s5) & Citra Lestari (s4)
+      // Mutual pairs: (s1 <-> s3), (s4 <-> s5), (s2 <-> s6)
+      // Isolate: Farhan Hakim (s7) - tidak dipilih sama sekali
+      // Neglected: Kevin Sanjaya (s11) - hanya 1 pilihan bobot 1
+      const demoChoices = {
+        "s1": { p1: "s3", p2: "s5", p3: "s9", alasan: "Sering belajar matematika bareng Bagus dan Dika." },
+        "s2": { p1: "s6", p2: "s4", p3: "s8", alasan: "Fania dan Citra sangat suportif dan pintar berdiskusi." },
+        "s3": { p1: "s1", p2: "s5", p3: "s12", alasan: "Aditya teman akrab sejak SMP." },
+        "s4": { p1: "s5", p2: "s2", p3: "s6", alasan: "Dika sangat bertanggung jawab dalam kelompok." },
+        "s5": { p1: "s4", p2: "s1", p3: "s3", alasan: "Citra dan Aditya sangat aktif dan komunikatif." },
+        "s6": { p1: "s2", p2: "s4", p3: "s10", alasan: "Anisa sangat tekun dan rajin mencatat." },
+        "s7": { p1: "s5", p2: "s1", p3: "s9", alasan: "Ingin belajar kelompok dengan teman yang pintar." },
+        "s8": { p1: "s4", p2: "s6", p3: "s5", alasan: "Citra dan Fania sabar membimbing tugas." },
+        "s9": { p1: "s5", p2: "s3", p3: "s1", alasan: "Bagus dan Dika sangat asyik diajak kerja kelompok." },
+        "s10": { p1: "s4", p2: "s8", p3: "s11", alasan: "Citra ketua kelompok yang adil." },
+        "s11": { p1: "s5", p2: "s4", p3: "s3", alasan: "Ingin kelompok belajar yang fokus dan terarah." },
+        "s12": { p1: "s4", p2: "s5", p3: "s2", alasan: "Citra dan Dika memiliki cara belajar yang bagus." }
+      };
+
+      AppState.students = demoStudents;
+      AppState.choices = demoChoices;
+      AppState.meta.kelas = "X-E6 (Demo BK)";
+      AppState.meta.namaSekolah = "SMA NEGERI 1 INDONESIA";
+
+      saveStateToStorage();
+      showToast("Data sampel sosiometri (12 siswa) berhasil dimuat!", "success");
+      
+      // Render ulang tampilan aktif
+      if (currentTab === 'angket') {
+        renderFormAngketOptions();
+        renderStatusPengisianList();
+      } else if (currentTab === 'sosiogram') {
+        renderSosiogramGraph();
+      } else if (currentTab === 'matriks') {
+        renderMatrixTable();
+      } else if (currentTab === 'laporan') {
+        renderLaporanPage();
+      } else if (currentTab === 'manajemen') {
+        renderTabelSiswaManajemen();
+      }
+      syncHeaderDisplay();
+    }
+
+    // ==========================================
+    // 11. MODAL PENGATURAN IDENTITAS SEKOLAH & BK
+    // ==========================================
+    function openConfigModal() {
+      const modal = document.getElementById('modalOverlay');
+      const content = document.getElementById('modalContent');
+      if (!modal || !content) return;
+
+      const m = AppState.meta;
+
+      content.innerHTML = `
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+          <h3 class="text-base font-bold text-slate-800">Pengaturan Identitas Asesmen & BK</h3>
+          <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 font-bold text-lg">&times;</button>
+        </div>
+
+        <form id="formConfigBK" onsubmit="handleSaveConfig(event)" class="space-y-3.5 text-xs">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Nama Sekolah</label>
+              <input type="text" id="cfgSekolah" value="${m.namaSekolah || ''}" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-brand-500" />
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Kelas</label>
+              <input type="text" id="cfgKelas" value="${m.kelas || ''}" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-brand-500" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Semester</label>
+              <input type="text" id="cfgSemester" value="${m.semester || 'Semester Ganjil'}" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg outline-none" />
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Tahun Ajaran</label>
+              <input type="text" id="cfgTahun" value="${m.tahunAjaran || '2024/2025'}" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg outline-none" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Kriteria Pemilihan Angket</label>
+            <input type="text" id="cfgKriteria" value="${m.kriteria || 'Teman Belajar Kelompok & Diskusi'}" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg outline-none" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Nama Guru BK / Konselor</label>
+              <input type="text" id="cfgGuruBK" value="${m.guruBK || ''}" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg outline-none" />
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">NIP Guru BK</label>
+              <input type="text" id="cfgNipGuru" value="${m.nipGuru || ''}" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg outline-none" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Nama Kepala Sekolah</label>
+              <input type="text" id="cfgKepsek" value="${m.kepalaSekolah || ''}" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg outline-none" />
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">NIP Kepala Sekolah</label>
+              <input type="text" id="cfgNipKepsek" value="${m.nipKepsek || ''}" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg outline-none" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Kota Asesmen</label>
+              <input type="text" id="cfgKota" value="${m.kota || 'Jakarta'}" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg outline-none" />
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Tanggal Asesmen</label>
+              <input type="date" id="cfgTanggal" value="${m.tanggalAsesmen || ''}" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg outline-none" />
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
+            <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium">Batal</button>
+            <button type="submit" class="px-5 py-2 bg-brand-700 hover:bg-brand-800 text-white rounded-lg font-semibold shadow-sm">Simpan Identitas</button>
+          </div>
+        </form>
+      `;
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('modalOverlay');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function handleSaveConfig(e) {
+      e.preventDefault();
+      AppState.meta.namaSekolah = document.getElementById('cfgSekolah').value.trim();
+      AppState.meta.kelas = document.getElementById('cfgKelas').value.trim();
+      AppState.meta.semester = document.getElementById('cfgSemester').value.trim();
+      AppState.meta.tahunAjaran = document.getElementById('cfgTahun').value.trim();
+      AppState.meta.kriteria = document.getElementById('cfgKriteria').value.trim();
+      AppState.meta.guruBK = document.getElementById('cfgGuruBK').value.trim();
+      AppState.meta.nipGuru = document.getElementById('cfgNipGuru').value.trim();
+      AppState.meta.kepalaSekolah = document.getElementById('cfgKepsek').value.trim();
+      AppState.meta.nipKepsek = document.getElementById('cfgNipKepsek').value.trim();
+      AppState.meta.kota = document.getElementById('cfgKota').value.trim();
+      AppState.meta.tanggalAsesmen = document.getElementById('cfgTanggal').value;
+
+      saveStateToStorage();
+      closeModal();
+      showToast("Identitas asesmen & BK berhasil diperbarui!", "success");
+
+      if (currentTab === 'laporan') {
+        renderLaporanPage();
+      }
+      syncHeaderDisplay();
+    }
+
+    function formatDateIndonesia(dateStr) {
+      if (!dateStr) return '';
+      try {
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+          const months = [
+            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+          ];
+          const d = parseInt(parts[2], 10);
+          const m = months[parseInt(parts[1], 10) - 1];
+          const y = parts[0];
+          return `${d} ${m} ${y}`;
+        }
+      } catch (e) {}
+      return dateStr;
+    }
+
+    // ==========================================
+    // 12. INISIALISASI SAAT HALAMAN DIMUAT
+    // ==========================================
+    window.addEventListener('DOMContentLoaded', () => {
+      loadStateFromStorage();
+      
+      // Jika baru pertama kali dibuka dan belum ada siswa, muat demo otomatis agar langsung interaktif
+      if (AppState.students.length === 0) {
+        loadSampleDemoData();
+      } else {
+        syncHeaderDisplay();
+        switchTab('angket');
+      }
+    });
+  </script>
+</body>
+</html>

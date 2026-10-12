@@ -1,0 +1,6 @@
+{
+  "name": "Sosiometri BK - Asesmen Dinamika Kelompok",
+  "description": "Instrumen Asesmen Sosiometri Bimbingan dan Konseling lengkap dengan Sosiogram interaktif, matriks, analisis indeks, dan cetak laporan PDF.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
