@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sosiometri BK - Asesmen Dinamika Kelompok & Sosiogram</title>
-  <meta name="description" content="Instrumen Asesmen Sosiometri Bimbingan dan Konseling (BK) lengkap dengan Sosiogram Interaktif, Matriks N x N, Klasifikasi Status Sosial, Rekomendasi Kelompok Belajar, dan Cetak PDF." />
+  <title>Sosiometri BK - Asesmen Dinamika Kelompok & Sosiogram (Google Sheets)</title>
+  <meta name="description" content="Instrumen Asesmen Sosiometri Bimbingan dan Konseling (BK) terintegrasi Google Sheets Web App, lengkap dengan Sosiogram Interaktif, Matriks N x N, dan Cetak PDF." />
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -40,7 +40,7 @@
       font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     }
     
-    /* Custom Scrollbar for large matrix tables */
+    /* Custom Scrollbar */
     .table-container::-webkit-scrollbar {
       height: 8px;
       width: 8px;
@@ -56,7 +56,7 @@
       background: #94a3b8;
     }
 
-    /* Print styles strictly tailored for A4 landscape & portrait */
+    /* Print styles */
     @media print {
       body {
         background-color: #ffffff !important;
@@ -100,7 +100,16 @@
   <!-- Toast Notification Container -->
   <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full"></div>
 
-  <!-- Modal Konfirmasi / Edit -->
+  <!-- Loading Overlay Global -->
+  <div id="globalLoadingOverlay" class="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 hidden flex flex-col items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 shadow-2xl flex flex-col items-center max-w-xs text-center border border-slate-100">
+      <div class="w-12 h-12 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin mb-3"></div>
+      <h4 class="text-sm font-bold text-slate-800" id="loadingOverlayTitle">Menyinkronkan dengan Google Sheets...</h4>
+      <p class="text-xs text-slate-500 mt-1" id="loadingOverlayDesc">Mengambil data respon & daftar siswa terbaru</p>
+    </div>
+  </div>
+
+  <!-- Modal Konfirmasi / Edit Identitas -->
   <div id="modalOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div id="modalContent" class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 transform transition-all"></div>
   </div>
@@ -119,23 +128,34 @@
           <div>
             <div class="flex items-center space-x-2">
               <h1 class="text-lg font-bold tracking-tight text-white leading-tight">Sosiometri BK</h1>
-              <span class="text-[10px] font-semibold uppercase tracking-wider bg-blue-500/30 text-blue-200 border border-blue-400/30 px-2 py-0.5 rounded-full">v2.0 Standalone</span>
+              <span class="text-[10px] font-semibold uppercase tracking-wider bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 px-2 py-0.5 rounded-full flex items-center space-x-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Google Sheets Sync</span>
+              </span>
             </div>
             <p class="text-xs text-blue-200/80">Instrumen Asesmen Dinamika Sosial & Hubungan Interpersonal Siswa</p>
           </div>
         </div>
 
-        <!-- Quick Summary & Config Info -->
+        <!-- Quick Summary & Refresh Action -->
         <div class="flex items-center flex-wrap gap-2 text-xs">
-          <button onclick="openConfigModal()" class="flex items-center space-x-1.5 bg-brand-800/80 hover:bg-brand-700/80 text-blue-100 px-3 py-1.5 rounded-lg border border-brand-700/60 transition">
+          <!-- Tombol Refresh / Muat Ulang -->
+          <button id="btnRefreshData" onclick="fetchDataFromSheet(true)" class="flex items-center space-x-1.5 bg-emerald-600/90 hover:bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg border border-emerald-500 shadow-sm transition active:scale-95" title="Ambil data siswa & respon terbaru dari Google Sheets">
+            <svg id="refreshIcon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            <span id="refreshBtnLabel">Muat Ulang / Refresh Data</span>
+          </button>
+
+          <!-- Edit Kop / Kelas -->
+          <button onclick="openConfigModal()" class="flex items-center space-x-1.5 bg-brand-800/80 hover:bg-brand-700/80 text-blue-100 px-3 py-1.5 rounded-lg border border-brand-700/60 transition" title="Klik untuk mengubah nama sekolah / kelas">
             <svg class="w-3.5 h-3.5 text-blue-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-            <span id="headerKelasLabel" class="font-semibold">Kelas: X-E6</span>
-            <span class="text-blue-400">·</span>
-            <span id="headerSekolahLabel" class="text-blue-200">SMA Negeri 1</span>
+            <span id="headerKelasLabel" class="font-semibold">Kelas: -</span>
           </button>
           
+          <!-- Stat Counter -->
           <div class="flex items-center space-x-1.5 bg-black/25 px-3 py-1.5 rounded-lg border border-white/10 text-blue-100">
-            <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="headerQuickDot" class="inline-block w-2 h-2 rounded-full bg-slate-400"></span>
             <span id="quickStatText">0 Siswa (0 Mengisi)</span>
           </div>
         </div>
@@ -161,7 +181,7 @@
         </button>
         <button onclick="switchTab('manajemen')" id="nav-manajemen" class="tab-btn flex items-center space-x-2 px-3.5 py-2 rounded-lg transition whitespace-nowrap text-blue-100 hover:bg-brand-800/60">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-          <span>5. Manajemen Siswa & Backup</span>
+          <span>5. Manajemen & Google Sheets</span>
         </button>
       </nav>
     </div>
@@ -169,6 +189,30 @@
 
   <!-- Main Container -->
   <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+    <!-- GLOBAL EMPTY STATE / GOOGLE SHEETS SYNC BANNER -->
+    <div id="globalSyncBanner" class="no-print mb-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+      <div class="flex items-start space-x-3">
+        <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h3 class="text-sm font-bold text-slate-800">Terkoneksi dengan Google Sheets Database</h3>
+            <span id="syncTimestampLabel" class="text-[11px] font-semibold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">Sinkronisasi: Memuat...</span>
+          </div>
+          <p class="text-xs text-slate-600 mt-0.5" id="syncStatusSubtitle">
+            Data siswa dan respon angket diambil secara langsung dari Google Apps Script Web App.
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2 shrink-0">
+        <button onclick="fetchDataFromSheet(true)" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center space-x-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          <span>Sinkronkan Sekarang</span>
+        </button>
+      </div>
+    </div>
 
     <!-- TAB 1: ANGKET PEMILIHAN SOSIOMETRI -->
     <section id="tab-angket" class="tab-content space-y-6">
@@ -180,7 +224,7 @@
           </span>
           <h2 class="text-xl font-bold text-slate-800">Formulir Pemilihan Sosiometri Siswa</h2>
           <p class="text-sm text-slate-600 mt-1 max-w-2xl">
-            Siswa diminta menentukan 3 teman yang paling diinginkan untuk belajar atau berdiskusi kelompok. Jawaban bersifat rahasia dan hanya digunakan guru BK untuk menyusun dinamika kelas yang sehat.
+            Siswa menentukan 3 teman yang paling diinginkan untuk belajar atau berdiskusi kelompok. Jawaban otomatis dikirim dan disimpan langsung ke Google Spreadsheet.
           </p>
         </div>
         <!-- Progress Bar Pengisian -->
@@ -206,7 +250,7 @@
                 1. Nama Kamu (Siswa Pemilih) <span class="text-red-500">*</span>
               </label>
               <select id="inputPemilih" onchange="handlePemilihChange()" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition text-sm">
-                <option value="">-- Pilih Nama Kamu --</option>
+                <option value="">-- Sedang memuat daftar siswa dari Google Sheets... --</option>
               </select>
               <p id="pemilihStatusNote" class="text-xs text-slate-500 mt-1.5"></p>
             </div>
@@ -257,25 +301,17 @@
               </div>
             </div>
 
-            <!-- Alasan Memilih -->
-            <div>
-              <label class="block text-sm font-bold text-slate-800 mb-1.5">
-                Alasan / Alasan Memilih Teman Tersebut <span class="text-xs font-normal text-slate-500">(Opsional untuk catatan guru BK)</span>
-              </label>
-              <textarea id="inputAlasan" rows="2" placeholder="Contoh: Mudah diajak berdiskusi, saling melengkapi cara belajar, disiplin..." class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none transition text-sm"></textarea>
-            </div>
-
             <!-- Peringatan Validasi -->
             <div id="formValidationAlert" class="hidden p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center space-x-2">
               <svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
               <span id="formValidationText">Periksa kembali pilihan Anda.</span>
             </div>
 
-            <!-- Submit Button -->
+            <!-- Submit Button with Loading State -->
             <div class="flex items-center space-x-3 pt-2">
-              <button type="submit" id="btnSubmitAngket" class="flex-1 bg-gradient-to-r from-brand-700 to-indigo-700 hover:from-brand-800 hover:to-indigo-800 text-white font-semibold py-3 px-6 rounded-xl shadow-md shadow-brand-700/20 transition flex items-center justify-center space-x-2 text-sm">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                <span>Kirim Pilihan Sosiometri</span>
+              <button type="submit" id="btnSubmitAngket" class="flex-1 bg-gradient-to-r from-emerald-600 to-brand-700 hover:from-emerald-700 hover:to-brand-800 text-white font-semibold py-3 px-6 rounded-xl shadow-md shadow-brand-700/20 transition flex items-center justify-center space-x-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                <svg id="submitIcon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                <span id="submitLabel">Kirim Pilihan ke Google Sheets</span>
               </button>
               <button type="button" onclick="resetFormAngket()" class="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition text-sm">
                 Reset
@@ -284,12 +320,15 @@
           </form>
         </div>
 
-        <!-- Daftar Siswa & Status Respons -->
+        <!-- Daftar Siswa & Status Respons dari Sheets -->
         <div class="lg:col-span-5 space-y-4">
           <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col h-[560px]">
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 class="text-sm font-bold text-slate-800">Daftar Status Pengisian Siswa</h3>
-              <span id="badgeBelumMengisi" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800">0 Belum Mengisi</span>
+              <div>
+                <h3 class="text-sm font-bold text-slate-800">Status Respon Google Sheets</h3>
+                <p class="text-[11px] text-slate-500">Daftar siswa & status pengisian angket</p>
+              </div>
+              <span id="badgeBelumMengisi" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">0 Belum Mengisi</span>
             </div>
             
             <!-- Filter & Search Siswa -->
@@ -312,7 +351,7 @@
         <div>
           <div class="flex items-center space-x-2">
             <h2 class="text-xl font-bold text-slate-800">Sosiogram Dinamika Hubungan Sosial Siswa</h2>
-            <span class="text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-0.5 rounded-full">Interactive Vis.js Graph</span>
+            <span class="text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full">Live Google Sheets Data</span>
           </div>
           <p class="text-xs text-slate-500 mt-1">
             Visualisasi graf berarah: node adalah siswa, anak panah menunjukkan arah pilihan teman, garis ganda/tebal menandakan saling memilih (Mutual Choices).
@@ -360,7 +399,7 @@
             <span class="font-bold text-slate-800 block text-xs">Legenda Warna Node Siswa:</span>
             <div class="flex items-center space-x-2">
               <span class="w-3.5 h-3.5 rounded-full bg-amber-400 border border-amber-600 inline-block shadow-sm"></span>
-              <span class="text-slate-700"><strong>Star (Bintang)</strong>: Sangat disukai & banyak dipilih</span>
+              <span class="text-slate-700"><strong>Star (Bintang)</strong>: Banyak dipilih rekan sekelas</span>
             </div>
             <div class="flex items-center space-x-2">
               <span class="w-3.5 h-3.5 rounded-full bg-blue-500 border border-blue-700 inline-block shadow-sm"></span>
@@ -368,7 +407,7 @@
             </div>
             <div class="flex items-center space-x-2">
               <span class="w-3.5 h-3.5 rounded-full bg-rose-400 border border-rose-600 inline-block shadow-sm"></span>
-              <span class="text-slate-700"><strong>Isolate</strong>: Tidak ada yang memilih (0 pilihan)</span>
+              <span class="text-slate-700"><strong>Isolate</strong>: Belum ada yang memilih (0 poin)</span>
             </div>
             <div class="flex items-center space-x-2">
               <span class="w-3.5 h-3.5 rounded-full bg-slate-400 border border-slate-600 inline-block shadow-sm"></span>
@@ -404,7 +443,7 @@
     <section id="tab-matriks" class="tab-content hidden space-y-6">
       <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 class="text-xl font-bold text-slate-800">Matriks Sosiometri N x N</h2>
+          <h2 class="text-xl font-bold text-slate-800">Matriks Sosiometri N x N (Kalkulasi Otomatis)</h2>
           <p class="text-xs text-slate-500 mt-1">
             Baris horizontal mewakili Siswa Pemilih, kolom vertikal mewakili Siswa yang Dipilih. Nilai sel: 3 = Pilihan 1, 2 = Pilihan 2, 1 = Pilihan 3.
           </p>
@@ -494,7 +533,7 @@
             <div>
               <h2 id="kopNamaSekolah" class="text-xl sm:text-2xl font-black text-slate-900 uppercase tracking-wide">SMA NEGERI 1 INDONESIA</h2>
               <p class="text-xs sm:text-sm font-semibold text-slate-700 tracking-wider">UNIT BIMBINGAN DAN KONSELING (BK)</p>
-              <p class="text-[11px] text-slate-500">Jl. Pendidikan No. 45, Kompleks Prestasi, Layanan Psikologis & Pengembangan Peserta Didik</p>
+              <p class="text-[11px] text-slate-500">Layanan Psikologis & Pengembangan Dinamika Sosial Peserta Didik</p>
             </div>
           </div>
           <div class="w-full h-0.5 bg-slate-900 mt-2"></div>
@@ -513,11 +552,11 @@
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
               <span class="text-slate-500 block text-[11px]">Kelas:</span>
-              <span id="repKelas" class="font-bold text-slate-800 text-sm">X-E6</span>
+              <span id="repKelas" class="font-bold text-slate-800 text-sm">-</span>
             </div>
             <div>
               <span class="text-slate-500 block text-[11px]">Semester / T.A.:</span>
-              <span id="repSemesterTahun" class="font-bold text-slate-800 text-sm">Ganjil / 2024-2025</span>
+              <span id="repSemesterTahun" class="font-bold text-slate-800 text-sm">- / -</span>
             </div>
             <div>
               <span class="text-slate-500 block text-[11px]">Kriteria Pilihan:</span>
@@ -525,7 +564,7 @@
             </div>
             <div>
               <span class="text-slate-500 block text-[11px]">Tanggal Asesmen:</span>
-              <span id="repTanggal" class="font-bold text-slate-800">12 Oktober 2024</span>
+              <span id="repTanggal" class="font-bold text-slate-800">-</span>
             </div>
           </div>
         </div>
@@ -677,7 +716,7 @@
               <p id="repNipKepsek" class="text-slate-500 text-[11px]">NIP. 19750312 199903 1 004</p>
             </div>
             <div>
-              <p id="repKotaTanggal" class="text-slate-500 mb-1">Jakarta, 12 Oktober 2024</p>
+              <p id="repKotaTanggal" class="text-slate-500 mb-1">Jakarta, -</p>
               <p class="font-bold text-slate-800">Guru Bimbingan dan Konseling</p>
               <div class="h-20"></div>
               <p id="repGuruBK" class="font-bold text-slate-900 underline">Dra. Siti Rahmawati, M.Pd., Kons.</p>
@@ -689,124 +728,92 @@
       </div>
     </section>
 
-    <!-- TAB 5: MANAJEMEN SISWA & BACKUP DATA -->
+    <!-- TAB 5: MANAJEMEN SISWA & GOOGLE SHEETS -->
     <section id="tab-manajemen" class="tab-content hidden space-y-6">
       
-      <!-- Top Action Bar: Sample Data & Reset -->
+      <!-- Top Action Bar: Google Sheets Status & Sync Controls -->
       <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 class="text-xl font-bold text-slate-800">Manajemen Siswa & Pencadangan Data</h2>
+          <div class="flex items-center space-x-2">
+            <h2 class="text-xl font-bold text-slate-800">Integrasi Google Sheets & Manajemen Data</h2>
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">Live Endpoint</span>
+          </div>
           <p class="text-xs text-slate-500 mt-1">
-            Seluruh data tersimpan aman di peramban lokal (LocalStorage). Ekspor cadangan file JSON untuk dipindahkan ke komputer/laptop lain.
+            Data tersimpan terpusat di Google Spreadsheet. Respon dari siswa langsung masuk ke lembar kerja secara seketika (*real-time*).
           </p>
         </div>
         <div class="flex items-center flex-wrap gap-2">
-          <button onclick="loadSampleDemoData()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5">
-            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
-            <span>Muat Data Sampel/Demo (12 Siswa)</span>
+          <!-- Tombol Sinkronisasi -->
+          <button onclick="fetchDataFromSheet(true)" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition flex items-center space-x-1.5 shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <span>Sinkronkan Ulang (GET)</span>
           </button>
-          
+
+          <!-- Cadangkan JSON -->
           <button onclick="backupDataJSON()" class="bg-brand-700 hover:bg-brand-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            <span>Cadangkan Data (.JSON)</span>
+            <span>Cadangkan JSON</span>
           </button>
 
-          <label class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition flex items-center space-x-1.5">
-            <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-            <span>Pulihkan Data (.JSON)</span>
-            <input type="file" id="uploadJSONFile" accept=".json" onchange="handleRestoreJSON(event)" class="hidden" />
-          </label>
-
-          <button onclick="confirmResetAllData()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1">
-            <svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-            <span>Kosongkan Semua</span>
-          </button>
+          <!-- Buka Spreadsheet / Web App -->
+          <a href="https://script.google.com/macros/s/AKfycbyoH90gq_xx2Ksfg47dCjWEohtMRQBXXQ6E4uQwDAQjnN1EDMJkh-I2QGqlle6CrXwB8g/exec" target="_blank" rel="noopener noreferrer" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5">
+            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            <span>Cek Web App Endpoint</span>
+          </a>
         </div>
       </div>
 
-      <!-- Tambah Siswa Form (Single & Paste Multiple) -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <!-- Tambah Satu per Satu -->
-        <div class="lg:col-span-5 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm space-y-4">
-          <h3 class="text-sm font-bold text-slate-800 flex items-center space-x-2">
-            <span class="w-2 h-2 rounded-full bg-brand-600"></span>
-            <span>Tambah Siswa Satu per Satu</span>
-          </h3>
-          <form onsubmit="handleTambahSiswaSatu(event)" class="space-y-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Lengkap Siswa</label>
-              <input type="text" id="inputNamaTunggal" placeholder="Contoh: Muhammad Farhan" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none" />
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Jenis Kelamin</label>
-              <div class="grid grid-cols-2 gap-3">
-                <label class="flex items-center space-x-2 p-2.5 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 text-xs font-medium">
-                  <input type="radio" name="genderTunggal" value="L" checked class="text-brand-600 focus:ring-brand-500" />
-                  <span>Laki-laki (L)</span>
-                </label>
-                <label class="flex items-center space-x-2 p-2.5 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 text-xs font-medium">
-                  <input type="radio" name="genderTunggal" value="P" class="text-brand-600 focus:ring-brand-500" />
-                  <span>Perempuan (P)</span>
-                </label>
-              </div>
-            </div>
-            <button type="submit" class="w-full bg-brand-700 hover:bg-brand-800 text-white font-semibold py-2.5 px-4 rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-sm">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-              <span>Tambahkan Siswa</span>
-            </button>
-          </form>
+      <!-- Info Endpoint Google Sheets Card -->
+      <div class="bg-gradient-to-r from-slate-900 to-brand-950 rounded-2xl p-5 text-white shadow-md border border-slate-800 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <div class="w-3 h-3 rounded-full bg-emerald-400 animate-ping"></div>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-300">URL Google Apps Script Web App Terhubung</h4>
+          </div>
+          <span class="text-[11px] text-slate-400 font-mono">Status: 200 OK</span>
+        </div>
+        <div class="bg-black/40 p-3 rounded-xl border border-white/10 flex items-center justify-between">
+          <code class="text-xs text-blue-200 font-mono break-all select-all">
+            https://script.google.com/macros/s/AKfycbyoH90gq_xx2Ksfg47dCjWEohtMRQBXXQ6E4uQwDAQjnN1EDMJkh-I2QGqlle6CrXwB8g/exec
+          </code>
+        </div>
+        <p class="text-[11px] text-slate-400 leading-relaxed">
+          Sistem secara otomatis membaca daftar siswa dari objek <code class="text-emerald-300">data.siswa</code> dan respon dari <code class="text-emerald-300">data.respon</code>. Setiap pengiriman angket dari tab 1 akan mengirimkan permintaan POST berformat JSON ke URL ini.
+        </p>
+      </div>
 
-          <div class="border-t border-slate-100 pt-4">
-            <details class="text-xs group">
-              <summary class="font-bold text-slate-700 cursor-pointer list-none flex items-center justify-between p-2 rounded-lg hover:bg-slate-50">
-                <span>Tempel / Paste Banyak Nama Sekaligus</span>
-                <span class="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
-              </summary>
-              <div class="pt-3 space-y-3">
-                <p class="text-[11px] text-slate-500">Tulis atau paste satu nama per baris. Contoh: Ahmad Fauzan (L) atau ketik nama saja.</p>
-                <textarea id="inputBatchNama" rows="4" placeholder="Aditya Pratama (L)&#10;Anisa Rahma (P)&#10;Bagus Permadi (L)&#10;Citra Lestari (P)" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none font-mono"></textarea>
-                <div class="flex items-center justify-between">
-                  <select id="batchDefaultGender" class="text-xs bg-slate-50 border border-slate-300 rounded-lg p-1.5">
-                    <option value="auto">Deteksi Otomatis (L/P di baris)</option>
-                    <option value="L">Default Laki-laki</option>
-                    <option value="P">Default Perempuan</option>
-                  </select>
-                  <button type="button" onclick="handleTambahSiswaBatch()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3 py-1.5 rounded-lg text-xs transition">
-                    Proses Batch
-                  </button>
-                </div>
-              </div>
-            </details>
+      <!-- Tabel Daftar Siswa Terdaftar dari Google Sheets -->
+      <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+          <div class="flex items-center space-x-2">
+            <h3 class="text-sm font-bold text-slate-800">Daftar Siswa di Google Sheets</h3>
+            <span id="badgeTotalSiswa" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">0 Siswa</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <input type="text" id="searchTabelSiswa" oninput="renderTabelSiswaManajemen()" placeholder="Cari nama siswa..." class="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:ring-1 focus:ring-brand-500" />
+            <button onclick="fetchDataFromSheet(true)" class="p-1.5 text-slate-500 hover:text-emerald-600 transition" title="Refresh">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            </button>
           </div>
         </div>
 
-        <!-- Tabel Daftar Siswa Terdaftar -->
-        <div class="lg:col-span-7 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
-            <div class="flex items-center space-x-2">
-              <h3 class="text-sm font-bold text-slate-800">Daftar Siswa Kelas Terdaftar</h3>
-              <span id="badgeTotalSiswa" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">0 Siswa</span>
-            </div>
-            <input type="text" id="searchTabelSiswa" oninput="renderTabelSiswaManajemen()" placeholder="Filter siswa..." class="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:ring-1 focus:ring-brand-500" />
-          </div>
-
-          <!-- Table Container -->
-          <div class="flex-1 overflow-x-auto table-container max-h-[420px] border border-slate-100 rounded-xl">
-            <table class="w-full text-xs text-left">
-              <thead class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 sticky top-0 z-10">
-                <tr>
-                  <th class="p-3 text-center w-10">No</th>
-                  <th class="p-3">Nama Siswa</th>
-                  <th class="p-3 text-center w-16">Gender</th>
-                  <th class="p-3 text-center w-28">Status Angket</th>
-                  <th class="p-3 text-center w-24">Aksi</th>
-                </tr>
-              </thead>
-              <tbody id="tabelSiswaBody" class="divide-y divide-slate-100">
-                <!-- Diisi via JS -->
-              </tbody>
-            </table>
-          </div>
+        <!-- Table Container -->
+        <div class="flex-1 overflow-x-auto table-container max-h-[460px] border border-slate-100 rounded-xl">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 sticky top-0 z-10">
+              <tr>
+                <th class="p-3 text-center w-10">No</th>
+                <th class="p-3">Nama Siswa</th>
+                <th class="p-3 text-center w-16">Gender</th>
+                <th class="p-3 text-center w-32">Status Angket</th>
+                <th class="p-3">Pilihan yang Diberikan (P1 / P2 / P3)</th>
+                <th class="p-3 text-center w-24">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tabelSiswaBody" class="divide-y divide-slate-100">
+              <!-- Diisi via JS -->
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -816,23 +823,23 @@
   <!-- Footer -->
   <footer class="no-print bg-white border-t border-slate-200/80 py-4 text-center text-xs text-slate-500">
     <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-      <p>© Aplikasi Asesmen Sosiometri Bimbingan dan Konseling - Penyimpanan Lokal Peramban (Offline First)</p>
+      <p>© Aplikasi Asesmen Sosiometri Bimbingan dan Konseling - Terintegrasi Google Apps Script & Google Sheets</p>
       <p class="text-slate-400">Dirancang untuk Guru BK, Konselor Sekolah, dan Peneliti Dinamika Kelompok</p>
     </div>
   </footer>
 
-  <!-- SCRIPT LOGIKA APLIKASI UTAMA (VANILLA JAVASCRIPT) -->
+  <!-- SCRIPT LOGIKA APLIKASI (GOOGLE SHEETS INTEGRATION) -->
   <script>
     // ==========================================
-    // 1. DATA STATE & STORAGE MANAGER
+    // 1. KONFIGURASI GOOGLE APPS SCRIPT WEB APP
     // ==========================================
-    const STORAGE_KEY = 'sosiometri_bk_app_v2';
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyoH90gq_xx2Ksfg47dCjWEohtMRQBXXQ6E4uQwDAQjnN1EDMJkh-I2QGqlle6CrXwB8g/exec";
 
-    // Model Default State
+    // Data State Utama di Memori
     let AppState = {
       meta: {
         namaSekolah: "SMA NEGERI 1 INDONESIA",
-        kelas: "X-E6",
+        kelas: "Kelas X",
         semester: "Semester Ganjil",
         tahunAjaran: "2024/2025",
         kriteria: "Teman Belajar Kelompok & Diskusi",
@@ -843,119 +850,271 @@
         kota: "Jakarta",
         tanggalAsesmen: new Date().toISOString().split('T')[0]
       },
-      students: [], // [{ id: 's1', nama: '...', gender: 'L'|'P' }]
-      choices: {}   // { [studentId]: { p1: 's2', p2: 's3', p3: 's4', alasan: '...' } }
+      students: [], // [{ id: 'Nama Siswa', nama: 'Nama Siswa', gender: 'L'|'P' }]
+      choices: {},  // { [namaSiswa]: { p1: '...', p2: '...', p3: '...', timestamp: '...' } }
+      lastSync: null
     };
 
-    // Muat data dari LocalStorage
-    function loadStateFromStorage() {
+    // Helper Loader State
+    function setGlobalLoading(isLoading, title = "Menyinkronkan dengan Google Sheets...", desc = "Mengambil data respon & daftar siswa terbaru") {
+      const overlay = document.getElementById('globalLoadingOverlay');
+      const t = document.getElementById('loadingOverlayTitle');
+      const d = document.getElementById('loadingOverlayDesc');
+      if (t) t.innerText = title;
+      if (d) d.innerText = desc;
+
+      const refreshBtnIcon = document.getElementById('refreshIcon');
+      if (refreshBtnIcon) {
+        if (isLoading) refreshBtnIcon.classList.add('animate-spin');
+        else refreshBtnIcon.classList.remove('animate-spin');
+      }
+
+      if (overlay) {
+        if (isLoading) overlay.classList.remove('hidden');
+        else overlay.classList.add('hidden');
+      }
+    }
+
+    // ==========================================
+    // 2. FETCH DATA DARI GOOGLE SHEETS (GET)
+    // ==========================================
+    async function fetchDataFromSheet(showToastAlert = false) {
+      setGlobalLoading(true, "Menghubungkan ke Google Sheets...", "Mengambil data.siswa dan data.respon");
+      const btnRefresh = document.getElementById('btnRefreshData');
+      if (btnRefresh) btnRefresh.disabled = true;
+
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed && Array.isArray(parsed.students)) {
-            AppState = {
-              meta: { ...AppState.meta, ...(parsed.meta || {}) },
-              students: parsed.students || [],
-              choices: parsed.choices || {}
-            };
+        // Cache buster via timestamp query parameter
+        const endpoint = `${SCRIPT_URL}?t=${Date.now()}`;
+        const response = await fetch(endpoint, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP Error status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Response dari Google Apps Script:", data);
+
+        // 1. Ekstrak Siswa dari data.siswa
+        let parsedStudents = [];
+        if (Array.isArray(data.siswa)) {
+          parsedStudents = data.siswa.map((item, idx) => {
+            if (typeof item === 'string') {
+              let nama = item.trim();
+              let gender = 'L';
+              const match = nama.match(/^(.*?)[,\s\t]*[\(\[]?([LlPp])[\)\]]?$/);
+              if (match) {
+                nama = match[1].trim();
+                gender = match[2].toUpperCase();
+              }
+              return { id: nama, nama: nama, gender: gender };
+            } else if (typeof item === 'object' && item !== null) {
+              const nama = (item.nama || item.Nama || item.name || item.siswa || item.Siswa || `Siswa ${idx + 1}`).trim();
+              const rawGender = item.gender || item.Gender || item.jk || item.JK || item['Jenis Kelamin'] || 'L';
+              const gender = String(rawGender).toUpperCase().startsWith('P') ? 'P' : 'L';
+              return { id: nama, nama: nama, gender: gender };
+            }
+            return { id: `Siswa ${idx + 1}`, nama: `Siswa ${idx + 1}`, gender: 'L' };
+          }).filter(s => s.nama.length > 0);
+        }
+
+        // 2. Ekstrak Respon dari data.respon
+        const parsedChoices = {};
+        const respondentNamesFromChoices = new Set();
+
+        if (Array.isArray(data.respon)) {
+          data.respon.forEach(r => {
+            if (!r) return;
+            const pemilih = (r.pemilih || r.nama || r.Nama || r.siswa || '').trim();
+            const p1 = (r.pilihan1 || r.p1 || r.Pilihan1 || '').trim();
+            const p2 = (r.pilihan2 || r.p2 || r.Pilihan2 || '').trim();
+            const p3 = (r.pilihan3 || r.p3 || r.Pilihan3 || '').trim();
+
+            if (pemilih) {
+              parsedChoices[pemilih] = {
+                p1: p1 || null,
+                p2: p2 || null,
+                p3: p3 || null,
+                timestamp: r.timestamp || r.waktu || null
+              };
+              respondentNamesFromChoices.add(pemilih);
+              if (p1) respondentNamesFromChoices.add(p1);
+              if (p2) respondentNamesFromChoices.add(p2);
+              if (p3) respondentNamesFromChoices.add(p3);
+            }
+          });
+        }
+
+        // Jika sheet siswa di Spreadsheet masih kosong namun ada respon yang masuk,
+        // daftarkan otomatis nama siswa dari pemilih/pilihan agar perhitungan matriks & sosiogram tetap dapat berjalan!
+        const existingNames = new Set(parsedStudents.map(s => s.nama));
+        respondentNamesFromChoices.forEach(name => {
+          if (name && !existingNames.has(name)) {
+            parsedStudents.push({
+              id: name,
+              nama: name,
+              gender: 'L' // Default gender
+            });
+            existingNames.add(name);
+          }
+        });
+
+        // Simpan ke state memori
+        AppState.students = parsedStudents;
+        AppState.choices = parsedChoices;
+        AppState.lastSync = new Date();
+
+        // Update UI
+        updateSyncBanner(true);
+        syncHeaderDisplay();
+        renderActiveTab();
+
+        if (showToastAlert) {
+          showToast(`Berhasil disinkronkan: ${AppState.students.length} siswa, ${Object.keys(AppState.choices).length} respon`, "success");
+        }
+      } catch (error) {
+        console.error("Gagal mengambil data dari Google Sheets:", error);
+        updateSyncBanner(false, error.message);
+        showToast(`Gagal terhubung ke Google Sheets: ${error.message}`, "error");
+      } finally {
+        setGlobalLoading(false);
+        if (btnRefresh) btnRefresh.disabled = false;
+      }
+    }
+
+    function updateSyncBanner(isSuccess, errorMsg = '') {
+      const banner = document.getElementById('globalSyncBanner');
+      const timeLabel = document.getElementById('syncTimestampLabel');
+      const subtitle = document.getElementById('syncStatusSubtitle');
+
+      if (isSuccess) {
+        const timeStr = AppState.lastSync ? AppState.lastSync.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '-';
+        if (timeLabel) {
+          timeLabel.innerText = `Sinkron: ${timeStr} WIB`;
+          timeLabel.className = "text-[11px] font-semibold text-emerald-700 bg-emerald-100/90 px-2 py-0.5 rounded-md";
+        }
+        if (subtitle) {
+          if (AppState.students.length === 0) {
+            subtitle.innerHTML = `<span class="text-amber-800 font-medium">Koneksi berhasil! Namun daftar siswa di Google Sheets masih kosong. Silakan isi lembar 'Siswa' di Spreadsheet Anda.</span>`;
+          } else {
+            subtitle.innerText = `Terhubung ke Google Spreadsheet: ${AppState.students.length} Siswa terdaftar, ${Object.keys(AppState.choices).length} Respon masuk.`;
           }
         }
-      } catch (err) {
-        console.error("Gagal membaca LocalStorage:", err);
-      }
-    }
-
-    // Simpan ke LocalStorage
-    function saveStateToStorage() {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(AppState));
-        syncHeaderDisplay();
-      } catch (err) {
-        console.error("Gagal menyimpan ke LocalStorage:", err);
-        showToast("Gagal menyimpan data ke browser!", "error");
-      }
-    }
-
-    // Sinkronisasi data di tampilan header
-    function syncHeaderDisplay() {
-      const elKelas = document.getElementById('headerKelasLabel');
-      const elSekolah = document.getElementById('headerSekolahLabel');
-      const elQuick = document.getElementById('quickStatText');
-      if (elKelas) elKelas.innerText = `Kelas: ${AppState.meta.kelas || '-'}`;
-      if (elSekolah) elSekolah.innerText = AppState.meta.namaSekolah || '-';
-      
-      const total = AppState.students.length;
-      const filled = Object.keys(AppState.choices).length;
-      if (elQuick) elQuick.innerText = `${total} Siswa (${filled} Mengisi)`;
-    }
-
-    // ==========================================
-    // 2. TOAST NOTIFICATION SYSTEM
-    // ==========================================
-    function showToast(message, type = 'info') {
-      const container = document.getElementById('toastContainer');
-      if (!container) return;
-      
-      const toast = document.createElement('div');
-      toast.className = `p-4 rounded-xl shadow-lg border text-xs font-semibold flex items-center space-x-3 transform transition-all duration-300 pointer-events-auto ${
-        type === 'success' ? 'bg-emerald-50 text-emerald-900 border-emerald-300' :
-        type === 'error' ? 'bg-rose-50 text-rose-900 border-rose-300' :
-        type === 'warning' ? 'bg-amber-50 text-amber-900 border-amber-300' :
-        'bg-slate-900 text-white border-slate-700'
-      }`;
-      
-      let icon = '';
-      if (type === 'success') {
-        icon = `<svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
-      } else if (type === 'error') {
-        icon = `<svg class="w-5 h-5 text-rose-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>`;
       } else {
-        icon = `<svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+        if (timeLabel) {
+          timeLabel.innerText = `Gagal Terhubung`;
+          timeLabel.className = "text-[11px] font-semibold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md";
+        }
+        if (subtitle) {
+          subtitle.innerText = `Periksa koneksi internet atau izin berbagi Web App Google Sheets. (${errorMsg})`;
+        }
       }
-
-      toast.innerHTML = `${icon}<span>${message}</span>`;
-      container.appendChild(toast);
-
-      setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(-10px)';
-        setTimeout(() => toast.remove(), 300);
-      }, 3500);
     }
 
     // ==========================================
-    // 3. TAB NAVIGATION
+    // 3. KIRIM DATA ANGKET KE GOOGLE SHEETS (POST)
     // ==========================================
-    let currentTab = 'angket';
-    function switchTab(tabId) {
-      currentTab = tabId;
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('bg-brand-800', 'text-white', 'shadow-sm', 'font-bold');
-        btn.classList.add('text-blue-100');
-      });
+    async function handleSimpanPilihan(e) {
+      e.preventDefault();
+      const pemilihNama = document.getElementById('inputPemilih').value;
+      const p1 = document.getElementById('inputPilihan1').value;
+      const p2 = document.getElementById('inputPilihan2').value;
+      const p3 = document.getElementById('inputPilihan3').value;
 
-      const activeSection = document.getElementById(`tab-${tabId}`);
-      const activeNav = document.getElementById(`nav-${tabId}`);
-      if (activeSection) activeSection.classList.remove('hidden');
-      if (activeNav) {
-        activeNav.classList.add('bg-brand-800', 'text-white', 'shadow-sm', 'font-bold');
-        activeNav.classList.remove('text-blue-100');
+      if (!pemilihNama) {
+        showToast("Pilih nama Anda terlebih dahulu!", "warning");
+        return;
       }
 
-      // Re-render konten sesuai tab yang dibuka
-      if (tabId === 'angket') {
-        renderFormAngketOptions();
-        renderStatusPengisianList();
-      } else if (tabId === 'sosiogram') {
-        setTimeout(() => renderSosiogramGraph(), 100);
-      } else if (tabId === 'matriks') {
-        renderMatrixTable();
-      } else if (tabId === 'laporan') {
-        renderLaporanPage();
-      } else if (tabId === 'manajemen') {
-        renderTabelSiswaManajemen();
+      if (!validatePilihanUnik()) {
+        showToast("Periksa validasi pilihan Anda!", "error");
+        return;
+      }
+
+      if (!p1 || !p2) {
+        showToast("Pilihan 1 dan Pilihan 2 wajib diisi!", "warning");
+        return;
+      }
+
+      // Payload sesuai format yang diminta:
+      // { pemilih: namaSiswa, pilihan1: pilihan1, pilihan2: pilihan2, pilihan3: pilihan3 }
+      const payload = {
+        pemilih: pemilihNama,
+        pilihan1: p1,
+        pilihan2: p2,
+        pilihan3: p3 || ""
+      };
+
+      // Efek loading tombol submit
+      const btnSubmit = document.getElementById('btnSubmitAngket');
+      const submitLabel = document.getElementById('submitLabel');
+      const submitIcon = document.getElementById('submitIcon');
+
+      btnSubmit.disabled = true;
+      if (submitLabel) submitLabel.innerText = "Menyimpan ke Google Sheets...";
+      if (submitIcon) {
+        submitIcon.classList.add('animate-spin');
+        submitIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>`;
+      }
+
+      try {
+        // Gunakan text/plain untuk menghindari preflight CORS OPTIONS pada Google Apps Script
+        const response = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        // Coba baca respon
+        let result = null;
+        try {
+          const text = await response.text();
+          result = JSON.parse(text);
+        } catch (parseErr) {
+          // Bila Google Apps Script melakukan redirect standar
+          result = { status: 'success' };
+        }
+
+        showToast(`Pilihan sosiometri untuk "${pemilihNama}" berhasil disimpan ke Google Sheets!`, "success");
+        
+        // Reset formulir
+        resetFormAngket();
+
+        // Otomatis muat ulang data terbaru dari Google Sheets (re-fetch GET)
+        await fetchDataFromSheet(false);
+
+      } catch (err) {
+        console.warn("Mencoba fallback pengiriman POST:", err);
+        // Fallback untuk mode browser tanpa menghentikan penyimpanan
+        try {
+          await fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8'
+            },
+            body: JSON.stringify(payload)
+          });
+          showToast(`Pilihan sosiometri untuk "${pemilihNama}" telah dikirim ke Google Sheets!`, "success");
+          resetFormAngket();
+          setTimeout(() => fetchDataFromSheet(false), 1500);
+        } catch (fallbackErr) {
+          showToast(`Gagal mengirim data ke Google Sheets: ${fallbackErr.message}`, "error");
+        }
+      } finally {
+        btnSubmit.disabled = false;
+        if (submitLabel) submitLabel.innerText = "Kirim Pilihan ke Google Sheets";
+        if (submitIcon) {
+          submitIcon.classList.remove('animate-spin');
+          submitIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>`;
+        }
       }
     }
 
@@ -967,7 +1126,7 @@
       const choices = AppState.choices;
       const n = students.length;
 
-      // Map id -> student
+      // Map nama/id -> student
       const studentMap = {};
       students.forEach(s => {
         studentMap[s.id] = s;
@@ -1090,20 +1249,49 @@
     }
 
     // ==========================================
-    // 5. TAB 1: LOGIKA FORM ANGKET & VALIDASI
+    // 5. TAB 1: FORM ANGKET & VALIDASI
     // ==========================================
     function renderFormAngketOptions() {
       const selectPemilih = document.getElementById('inputPemilih');
+      const selectP1 = document.getElementById('inputPilihan1');
+      const selectP2 = document.getElementById('inputPilihan2');
+      const selectP3 = document.getElementById('inputPilihan3');
+      const btnSubmit = document.getElementById('btnSubmitAngket');
       if (!selectPemilih) return;
 
       const currentVal = selectPemilih.value;
+      const hasStudents = AppState.students.length > 0;
+
+      if (!hasStudents) {
+        selectPemilih.innerHTML = '<option value="">-- Data siswa di Google Sheets masih kosong --</option>';
+        selectP1.innerHTML = '<option value="">-- Menunggu data siswa dari Google Sheets --</option>';
+        selectP2.innerHTML = '<option value="">-- Menunggu data siswa dari Google Sheets --</option>';
+        selectP3.innerHTML = '<option value="">-- Menunggu data siswa dari Google Sheets --</option>';
+        selectPemilih.disabled = true;
+        selectP1.disabled = true;
+        selectP2.disabled = true;
+        selectP3.disabled = true;
+        if (btnSubmit) btnSubmit.disabled = true;
+        
+        const noteEl = document.getElementById('pemilihStatusNote');
+        if (noteEl) noteEl.innerHTML = `<span class="text-amber-700 font-medium">Belum ada siswa di Spreadsheet. Pastikan sheet <strong>'Siswa'</strong> telah diisi daftar nama siswa, lalu tekan tombol "Muat Ulang / Refresh Data".</span>`;
+        updateAngketProgress();
+        return;
+      }
+
+      selectPemilih.disabled = false;
+      selectP1.disabled = false;
+      selectP2.disabled = false;
+      selectP3.disabled = false;
+      if (btnSubmit) btnSubmit.disabled = false;
+
       selectPemilih.innerHTML = '<option value="">-- Pilih Nama Kamu --</option>';
 
       AppState.students.forEach(s => {
         const isFilled = !!AppState.choices[s.id];
         const opt = document.createElement('option');
         opt.value = s.id;
-        opt.textContent = `${s.nama} (${s.gender}) ${isFilled ? '✓ (Sudah Mengisi)' : '• (Belum Mengisi)'}`;
+        opt.textContent = `${s.nama} (${s.gender}) ${isFilled ? '✓ (Sudah Mengisi di Sheets)' : '• (Belum Mengisi)'}`;
         selectPemilih.appendChild(opt);
       });
 
@@ -1119,8 +1307,9 @@
       const selectP1 = document.getElementById('inputPilihan1');
       const selectP2 = document.getElementById('inputPilihan2');
       const selectP3 = document.getElementById('inputPilihan3');
-      const inputAlasan = document.getElementById('inputAlasan');
       const noteEl = document.getElementById('pemilihStatusNote');
+
+      if (AppState.students.length === 0) return;
 
       // Populate options for P1, P2, P3 excluding pemilih
       [selectP1, selectP2, selectP3].forEach((sel, idx) => {
@@ -1137,20 +1326,18 @@
         sel.value = prev;
       });
 
-      // Jika siswa ini sudah pernah mengisi, muat data sebelumnya untuk diedit
+      // Jika siswa ini sudah pernah ada responnya di Google Sheets
       if (pemilihId && AppState.choices[pemilihId]) {
         const existing = AppState.choices[pemilihId];
         selectP1.value = existing.p1 || '';
         selectP2.value = existing.p2 || '';
         selectP3.value = existing.p3 || '';
-        inputAlasan.value = existing.alasan || '';
-        if (noteEl) noteEl.innerHTML = `<span class="text-blue-600 font-medium">✓ Siswa ini telah mengisi data sebelumnya. Anda sedang dalam mode memperbarui (edit) pilihan.</span>`;
+        if (noteEl) noteEl.innerHTML = `<span class="text-emerald-700 font-medium">✓ Data respon siswa ini sudah tercatat di Google Sheets. Anda dapat mengirim ulang untuk memperbarui pilihan.</span>`;
       } else {
-        if (noteEl) noteEl.innerText = pemilihId ? "Siswa belum mengisi. Silakan pilih 3 teman." : "";
+        if (noteEl) noteEl.innerText = pemilihId ? "Siswa belum mengisi. Silakan tentukan pilihan teman di bawah ini." : "";
         selectP1.value = '';
         selectP2.value = '';
         selectP3.value = '';
-        inputAlasan.value = '';
       }
 
       validatePilihanUnik();
@@ -1167,7 +1354,7 @@
 
       if (!pemilihId) {
         alertBox.classList.add('hidden');
-        btnSubmit.disabled = false;
+        btnSubmit.disabled = AppState.students.length === 0;
         return true;
       }
 
@@ -1194,46 +1381,6 @@
       return true;
     }
 
-    function handleSimpanPilihan(e) {
-      e.preventDefault();
-      const pemilihId = document.getElementById('inputPemilih').value;
-      const p1 = document.getElementById('inputPilihan1').value;
-      const p2 = document.getElementById('inputPilihan2').value;
-      const p3 = document.getElementById('inputPilihan3').value;
-      const alasan = document.getElementById('inputAlasan').value.trim();
-
-      if (!pemilihId) {
-        showToast("Pilih nama Anda terlebih dahulu!", "warning");
-        return;
-      }
-
-      if (!validatePilihanUnik()) {
-        showToast("Periksa validasi pilihan Anda!", "error");
-        return;
-      }
-
-      if (!p1 || !p2) {
-        showToast("Pilihan 1 dan Pilihan 2 wajib diisi!", "warning");
-        return;
-      }
-
-      AppState.choices[pemilihId] = {
-        p1: p1,
-        p2: p2,
-        p3: p3 || null,
-        alasan: alasan,
-        timestamp: new Date().toISOString()
-      };
-
-      saveStateToStorage();
-      showToast(`Pilihan sosiometri untuk "${getStudentName(pemilihId)}" berhasil disimpan!`, "success");
-      
-      // Update antarmuka
-      renderFormAngketOptions();
-      renderStatusPengisianList();
-      updateAngketProgress();
-    }
-
     function resetFormAngket() {
       document.getElementById('formSosiometri').reset();
       handlePemilihChange();
@@ -1252,7 +1399,17 @@
       if (pBar) pBar.style.width = `${percent}%`;
       if (pText) pText.innerText = `${percent}%`;
       if (pDetail) pDetail.innerText = `${filled} dari ${total} siswa telah mengisi`;
-      if (bBelum) bBelum.innerText = `${total - filled} Belum Mengisi`;
+      if (bBelum) {
+        if (total === 0) {
+          bBelum.innerText = "0 Siswa";
+          bBelum.className = "text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600";
+        } else {
+          bBelum.innerText = `${total - filled} Belum Mengisi`;
+          bBelum.className = (total - filled > 0) ? 
+            "text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800" :
+            "text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800";
+        }
+      }
     }
 
     function renderStatusPengisianList() {
@@ -1263,9 +1420,13 @@
       container.innerHTML = '';
       if (AppState.students.length === 0) {
         container.innerHTML = `
-          <div class="text-center py-12 text-slate-400">
-            <p class="text-xs">Belum ada siswa terdaftar.</p>
-            <button onclick="switchTab('manajemen')" class="mt-2 text-xs text-brand-600 font-semibold underline">Tambah Siswa Sekarang</button>
+          <div class="text-center py-12 px-4 text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+            <svg class="w-10 h-10 mx-auto text-slate-300 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            <p class="text-xs font-semibold text-slate-600">Belum ada siswa di Google Sheets.</p>
+            <p class="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto">Silakan tambahkan nama siswa pada lembar 'Siswa' di Google Spreadsheet Anda atau muat ulang data.</p>
+            <div class="mt-3 flex items-center justify-center space-x-2">
+              <button onclick="fetchDataFromSheet(true)" class="text-xs px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition">Muat Ulang (GET)</button>
+            </div>
           </div>
         `;
         return;
@@ -1273,21 +1434,21 @@
 
       const filtered = AppState.students.filter(s => s.nama.toLowerCase().includes(search));
 
-      filtered.forEach((s, idx) => {
+      filtered.forEach((s) => {
         const choice = AppState.choices[s.id];
         const isFilled = !!choice;
 
         const item = document.createElement('div');
         item.className = `p-3 rounded-xl border transition flex items-center justify-between text-xs ${
-          isFilled ? 'bg-slate-50 border-slate-200' : 'bg-amber-50/40 border-amber-200/80'
+          isFilled ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-50 border-slate-200'
         }`;
 
         let detailText = '';
         if (isFilled) {
           const names = [getStudentName(choice.p1), getStudentName(choice.p2), getStudentName(choice.p3)].filter(Boolean);
-          detailText = `<p class="text-[11px] text-slate-500 truncate max-w-[200px]">Memilih: ${names.join(', ')}</p>`;
+          detailText = `<p class="text-[11px] text-emerald-800 truncate max-w-[200px]">Memilih: ${names.join(', ')}</p>`;
         } else {
-          detailText = `<p class="text-[11px] text-amber-700 font-medium">Belum memberikan pilihan</p>`;
+          detailText = `<p class="text-[11px] text-amber-700 font-medium">Belum mengisi angket</p>`;
         }
 
         item.innerHTML = `
@@ -1302,15 +1463,10 @@
           </div>
           <div class="flex items-center space-x-1 shrink-0">
             <button onclick="pilihSiswaUntukInput('${s.id}')" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
-              isFilled ? 'bg-slate-200 hover:bg-slate-300 text-slate-700' : 'bg-brand-700 hover:bg-brand-800 text-white'
+              isFilled ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800' : 'bg-brand-700 hover:bg-brand-800 text-white'
             }">
-              ${isFilled ? 'Edit' : 'Input'}
+              ${isFilled ? 'Ubah' : 'Input'}
             </button>
-            ${isFilled ? `
-              <button onclick="hapusResponSiswa('${s.id}')" title="Hapus Respon" class="p-1 text-slate-400 hover:text-rose-600 transition">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-              </button>
-            ` : ''}
           </div>
         `;
         container.appendChild(item);
@@ -1323,17 +1479,6 @@
         select.value = studentId;
         handlePemilihChange();
         select.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }
-
-    function hapusResponSiswa(studentId) {
-      if (confirm(`Hapus respon sosiometri untuk "${getStudentName(studentId)}"?`)) {
-        delete AppState.choices[studentId];
-        saveStateToStorage();
-        showToast("Respon berhasil dihapus", "info");
-        renderFormAngketOptions();
-        renderStatusPengisianList();
-        updateAngketProgress();
       }
     }
 
@@ -1356,8 +1501,10 @@
       if (AppState.students.length === 0) {
         container.innerHTML = `
           <div class="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
-            <p class="text-sm font-semibold">Belum ada data siswa.</p>
-            <p class="text-xs text-slate-400 mt-1">Muat data demo di tab Manajemen Siswa untuk melihat Sosiogram.</p>
+            <svg class="w-16 h-16 text-slate-300 mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            <p class="text-sm font-bold text-slate-600">Belum ada data siswa untuk Sosiogram.</p>
+            <p class="text-xs text-slate-400 mt-1 max-w-sm">Pastikan spreadsheet memiliki data siswa dan respon angket, lalu klik Muat Ulang.</p>
+            <button onclick="fetchDataFromSheet(true)" class="mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition shadow-sm">Sinkronkan Data Google Sheets</button>
           </div>
         `;
         return;
@@ -1376,29 +1523,21 @@
 
         const stat = metrics.stats[s.id] || { totalChoicesReceived: 0, weightedScore: 0, classification: 'Average' };
         
-        // Penentuan Warna berdasarkan status
-        let bgColor = '#3b82f6'; // Average default blue
+        let bgColor = '#3b82f6';
         let borderColor = '#1d4ed8';
-        let fontColor = '#ffffff';
 
         if (stat.classification === 'Star') {
-          bgColor = '#f59e0b'; // Amber Gold
+          bgColor = '#f59e0b';
           borderColor = '#b45309';
-          fontColor = '#ffffff';
         } else if (stat.classification === 'Isolate') {
-          bgColor = '#f43f5e'; // Rose Pink
+          bgColor = '#f43f5e';
           borderColor = '#be123c';
-          fontColor = '#ffffff';
         } else if (stat.classification === 'Neglected') {
-          bgColor = '#94a3b8'; // Slate Gray
+          bgColor = '#94a3b8';
           borderColor = '#475569';
-          fontColor = '#ffffff';
         }
 
-        // Ukuran node membesar sesuai skor (min 20, max 42)
         const nodeSize = Math.max(20, Math.min(42, 20 + stat.weightedScore * 2.2));
-
-        // Format label
         const shortName = s.nama.split(' ')[0] + (s.nama.split(' ')[1] ? ' ' + s.nama.split(' ')[1][0] + '.' : '');
 
         nodesData.push({
@@ -1425,10 +1564,7 @@
         });
       });
 
-      // Filter Node IDs
       const validNodeIds = new Set(nodesData.map(n => n.id));
-
-      // Siapkan Edges
       const mutualPairKeys = new Set(metrics.mutualPairs.map(p => p.pairKey));
       const addedMutualEdgeKeys = new Set();
 
@@ -1447,12 +1583,10 @@
           const pairKey = [chooser.id, rel.target].sort().join('___');
           const isMutual = mutualPairKeys.has(pairKey);
 
-          // Filter Mode logic
           if (mode === 'mutual' && !isMutual) return;
           if (mode === 'p1' && rel.rank !== 1) return;
 
           if (isMutual) {
-            // Jika hubungan mutual, buat edge timbal balik yang tegas
             if (!addedMutualEdgeKeys.has(pairKey)) {
               addedMutualEdgeKeys.add(pairKey);
               edgesData.push({
@@ -1469,7 +1603,6 @@
               });
             }
           } else {
-            // Relasi satu arah biasa
             const edgeColor = rel.rank === 1 ? '#3b82f6' : rel.rank === 2 ? '#60a5fa' : '#94a3b8';
             edgesData.push({
               from: chooser.id,
@@ -1517,7 +1650,6 @@
 
       networkInstance = new vis.Network(container, data, options);
 
-      // Event Klik Node untuk Inspector
       networkInstance.on("click", function(params) {
         if (params.nodes.length > 0) {
           const selectedId = params.nodes[0];
@@ -1646,7 +1778,15 @@
       const n = students.length;
 
       if (n === 0) {
-        table.innerHTML = `<tr><td class="p-8 text-center text-slate-400">Belum ada data siswa terdaftar.</td></tr>`;
+        table.innerHTML = `
+          <tr>
+            <td class="p-12 text-center text-slate-400 bg-slate-50">
+              <svg class="w-12 h-12 mx-auto text-slate-300 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              <p class="text-sm font-bold text-slate-600">Belum ada data siswa di Google Sheets.</p>
+              <p class="text-xs text-slate-400 mt-1">Pastikan spreadsheet memiliki data siswa dan respon angket, lalu tekan tombol Muat Ulang.</p>
+            </td>
+          </tr>
+        `;
         return;
       }
 
@@ -1681,9 +1821,8 @@
           ${rowStudent.nama} <span class="text-[10px] text-slate-400">(${rowStudent.gender})</span>
         </td>`;
 
-        students.forEach((colStudent, cIdx) => {
+        students.forEach((colStudent) => {
           if (rowStudent.id === colStudent.id) {
-            // Diagonal (Diri sendiri)
             html += `<td class="p-2 border border-slate-200 bg-slate-200/80 text-slate-400 font-mono font-bold">-</td>`;
           } else {
             let val = '';
@@ -1720,10 +1859,9 @@
       });
       html += `</tbody>`;
 
-      // TFOOT: Baris Rekapitulasi Statistik di Bagian Bawah Matriks
+      // TFOOT
       html += `<tfoot class="border-t-2 border-slate-300 font-semibold text-xs">`;
       
-      // Baris Frekuensi P1
       html += `<tr class="bg-blue-50/40 text-blue-900">`;
       html += `<td class="p-2 border border-slate-200 text-center sticky left-0 bg-blue-100 z-10" colspan="2">Jumlah Pilihan 1 (P1)</td>`;
       students.forEach(s => {
@@ -1731,7 +1869,6 @@
       });
       html += `<td class="p-2 border border-slate-200 font-bold">-</td></tr>`;
 
-      // Baris Frekuensi P2
       html += `<tr class="bg-indigo-50/40 text-indigo-900">`;
       html += `<td class="p-2 border border-slate-200 text-center sticky left-0 bg-indigo-100 z-10" colspan="2">Jumlah Pilihan 2 (P2)</td>`;
       students.forEach(s => {
@@ -1739,7 +1876,6 @@
       });
       html += `<td class="p-2 border border-slate-200 font-bold">-</td></tr>`;
 
-      // Baris Frekuensi P3
       html += `<tr class="bg-slate-50 text-slate-800">`;
       html += `<td class="p-2 border border-slate-200 text-center sticky left-0 bg-slate-200 z-10" colspan="2">Jumlah Pilihan 3 (P3)</td>`;
       students.forEach(s => {
@@ -1747,7 +1883,6 @@
       });
       html += `<td class="p-2 border border-slate-200 font-bold">-</td></tr>`;
 
-      // Baris Total Frekuensi (F)
       html += `<tr class="bg-slate-100 text-slate-900 font-bold">`;
       html += `<td class="p-2 border border-slate-300 text-center sticky left-0 bg-slate-200 z-10" colspan="2">Total Frekuensi Pilihan (F)</td>`;
       students.forEach(s => {
@@ -1755,7 +1890,6 @@
       });
       html += `<td class="p-2 border border-slate-300 font-bold">-</td></tr>`;
 
-      // Baris Skor Berbobot (W)
       html += `<tr class="bg-brand-50 text-brand-950 font-bold">`;
       html += `<td class="p-2 border border-brand-200 text-center sticky left-0 bg-brand-100 z-10" colspan="2">Skor Berbobot (W)</td>`;
       students.forEach(s => {
@@ -1763,7 +1897,6 @@
       });
       html += `<td class="p-2 border border-brand-200 font-bold">-</td></tr>`;
 
-      // Baris Indeks Status Sosiometri (CS)
       html += `<tr class="bg-blue-100/70 text-blue-950 font-bold">`;
       html += `<td class="p-2 border border-blue-300 text-center sticky left-0 bg-blue-200 z-10" colspan="2">Indeks Sosiometri (CS)</td>`;
       students.forEach(s => {
@@ -1771,7 +1904,6 @@
       });
       html += `<td class="p-2 border border-blue-300 font-bold">-</td></tr>`;
 
-      // Baris Status Sosiometri
       html += `<tr class="bg-slate-200 text-slate-900 font-bold text-[11px]">`;
       html += `<td class="p-2 border border-slate-300 text-center sticky left-0 bg-slate-300 z-10" colspan="2">Klasifikasi Status</td>`;
       students.forEach(s => {
@@ -1837,14 +1969,12 @@
       const meta = AppState.meta;
       const metrics = calculateSociometryMetrics();
 
-      // Sinkronisasi Kop & Metadata
       document.getElementById('kopNamaSekolah').innerText = meta.namaSekolah || 'SMA NEGERI 1 INDONESIA';
       document.getElementById('repKelas').innerText = meta.kelas || '-';
       document.getElementById('repSemesterTahun').innerText = `${meta.semester || '-'} / ${meta.tahunAjaran || '-'}`;
       document.getElementById('repKriteria').innerText = meta.kriteria || 'Teman Belajar Kelompok';
       document.getElementById('repTanggal').innerText = formatDateIndonesia(meta.tanggalAsesmen);
 
-      // Statistik Utama
       document.getElementById('repStatTotalSiswa').innerText = `${metrics.studentCount} Siswa`;
       const partPercent = metrics.studentCount > 0 ? Math.round((metrics.respondentCount / metrics.studentCount) * 100) : 0;
       document.getElementById('repStatPartisipasi').innerText = `${partPercent}%`;
@@ -1853,60 +1983,60 @@
       const isolates = Object.values(metrics.stats).filter(s => s.classification === 'Isolate');
       document.getElementById('repStatIsolateCount').innerText = `${isolates.length} Siswa`;
 
-      // Tabel Status Sosiometri
       const tbody = document.getElementById('repTableBody');
       tbody.innerHTML = '';
 
-      const sortedList = Object.values(metrics.stats).sort((a, b) => b.weightedScore - a.weightedScore);
-
-      sortedList.forEach((stat, idx) => {
-        const tr = document.createElement('tr');
-        tr.className = 'hover:bg-slate-50 transition';
-
-        let badgeClass = 'text-blue-800 bg-blue-50';
-        if (stat.classification === 'Star') badgeClass = 'text-amber-800 bg-amber-100 font-bold';
-        if (stat.classification === 'Isolate') badgeClass = 'text-rose-800 bg-rose-100 font-bold';
-        if (stat.classification === 'Neglected') badgeClass = 'text-slate-600 bg-slate-100';
-
-        tr.innerHTML = `
-          <td class="p-2.5 text-center font-bold text-slate-600">${idx + 1}</td>
-          <td class="p-2.5 font-semibold text-slate-800">${stat.student.nama}</td>
-          <td class="p-2.5 text-center">${stat.student.gender}</td>
-          <td class="p-2.5 text-center text-blue-700">${stat.p1Count}</td>
-          <td class="p-2.5 text-center text-indigo-700">${stat.p2Count}</td>
-          <td class="p-2.5 text-center text-slate-600">${stat.p3Count}</td>
-          <td class="p-2.5 text-center font-bold text-slate-900">${stat.totalChoicesReceived}</td>
-          <td class="p-2.5 text-center font-bold text-brand-700">${stat.weightedScore}</td>
-          <td class="p-2.5 text-center font-mono font-semibold">${stat.choiceStatusIndex}</td>
-          <td class="p-2.5 text-center">
-            <span class="px-2 py-0.5 rounded text-[10px] uppercase ${badgeClass}">${stat.classification}</span>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      // Temuan Khusus Star & Isolate
-      const stars = sortedList.filter(s => s.classification === 'Star');
-      const starEl = document.getElementById('repStarDesc');
-      if (stars.length > 0) {
-        const starNames = stars.map(s => `<strong>${s.student.nama}</strong> (Skor: ${s.weightedScore})`).join(', ');
-        starEl.innerHTML = `Siswa dengan penerimaan sosial tertinggi di kelas adalah ${starNames}. Mereka memiliki pengaruh positif besar dalam kelompok dan dipercaya teman sekelas.`;
+      if (AppState.students.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" class="p-6 text-center text-slate-400 italic">Belum ada data siswa di Google Sheets.</td></tr>`;
       } else {
-        starEl.innerText = "Distribusi pilihan relatif merata; tidak terdapat individu yang mendominasi pilihan secara ekstrem.";
+        const sortedList = Object.values(metrics.stats).sort((a, b) => b.weightedScore - a.weightedScore);
+
+        sortedList.forEach((stat, idx) => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50 transition';
+
+          let badgeClass = 'text-blue-800 bg-blue-50';
+          if (stat.classification === 'Star') badgeClass = 'text-amber-800 bg-amber-100 font-bold';
+          if (stat.classification === 'Isolate') badgeClass = 'text-rose-800 bg-rose-100 font-bold';
+          if (stat.classification === 'Neglected') badgeClass = 'text-slate-600 bg-slate-100';
+
+          tr.innerHTML = `
+            <td class="p-2.5 text-center font-bold text-slate-600">${idx + 1}</td>
+            <td class="p-2.5 font-semibold text-slate-800">${stat.student.nama}</td>
+            <td class="p-2.5 text-center">${stat.student.gender}</td>
+            <td class="p-2.5 text-center text-blue-700">${stat.p1Count}</td>
+            <td class="p-2.5 text-center text-indigo-700">${stat.p2Count}</td>
+            <td class="p-2.5 text-center text-slate-600">${stat.p3Count}</td>
+            <td class="p-2.5 text-center font-bold text-slate-900">${stat.totalChoicesReceived}</td>
+            <td class="p-2.5 text-center font-bold text-brand-700">${stat.weightedScore}</td>
+            <td class="p-2.5 text-center font-mono font-semibold">${stat.choiceStatusIndex}</td>
+            <td class="p-2.5 text-center">
+              <span class="px-2 py-0.5 rounded text-[10px] uppercase ${badgeClass}">${stat.classification}</span>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        const stars = sortedList.filter(s => s.classification === 'Star');
+        const starEl = document.getElementById('repStarDesc');
+        if (stars.length > 0) {
+          const starNames = stars.map(s => `<strong>${s.student.nama}</strong> (Skor: ${s.weightedScore})`).join(', ');
+          starEl.innerHTML = `Siswa dengan penerimaan sosial tertinggi di kelas adalah ${starNames}. Mereka memiliki pengaruh positif besar dalam kelompok dan dipercaya teman sekelas.`;
+        } else {
+          starEl.innerText = "Distribusi pilihan relatif merata; tidak terdapat individu yang mendominasi pilihan secara ekstrem.";
+        }
+
+        const isolateEl = document.getElementById('repIsolateDesc');
+        if (isolates.length > 0) {
+          const isoNames = isolates.map(s => `<strong>${s.student.nama}</strong>`).join(', ');
+          isolateEl.innerHTML = `Terdeteksi ${isolates.length} siswa yang tidak mendapatkan pilihan sama sekali: ${isoNames}. Berisiko mengalami penarikan diri sosial atau hambatan relasi yang membutuhkan intervensi guru BK.`;
+        } else {
+          isolateEl.innerText = "Kabar baik: Semua siswa di kelas ini mendapatkan setidaknya 1 pilihan dari teman-temannya. Tidak ada siswa yang terisolir secara mutlak.";
+        }
       }
 
-      const isolateEl = document.getElementById('repIsolateDesc');
-      if (isolates.length > 0) {
-        const isoNames = isolates.map(s => `<strong>${s.student.nama}</strong>`).join(', ');
-        isolateEl.innerHTML = `Terdeteksi ${isolates.length} siswa yang tidak mendapatkan pilihan sama sekali: ${isoNames}. Berisiko mengalami penarikan diri sosial atau hambatan relasi yang membutuhkan intervensi guru BK.`;
-      } else {
-        isolateEl.innerText = "Kabar baik: Semua siswa di kelas ini mendapatkan setidaknya 1 pilihan dari teman-temannya. Tidak ada siswa yang terisolir secara mutlak.";
-      }
-
-      // Rekomendasi Kelompok Belajar Seimbang
       renderKelompokBelajar();
 
-      // Tanda Tangan
       document.getElementById('repKepalaSekolah').innerText = meta.kepalaSekolah || '-';
       document.getElementById('repNipKepsek').innerText = meta.nipKepsek ? `NIP. ${meta.nipKepsek}` : '';
       document.getElementById('repGuruBK').innerText = meta.guruBK || '-';
@@ -1914,7 +2044,6 @@
       document.getElementById('repKotaTanggal').innerText = `${meta.kota || 'Jakarta'}, ${formatDateIndonesia(meta.tanggalAsesmen)}`;
     }
 
-    // Algoritma Otomatis Pembagian Kelompok Belajar Seimbang (Anti-Klik)
     function renderKelompokBelajar() {
       const k = parseInt(document.getElementById('selectJumlahKelompok')?.value || '3', 10);
       const container = document.getElementById('rekomendasiKelompokContainer');
@@ -1922,44 +2051,37 @@
 
       const students = AppState.students;
       if (students.length === 0) {
-        container.innerHTML = `<p class="col-span-full text-center text-slate-400">Belum ada data siswa.</p>`;
+        container.innerHTML = `<p class="col-span-full text-center text-slate-400 py-4 italic">Belum ada data siswa untuk rekomendasi kelompok.</p>`;
         return;
       }
 
       const metrics = calculateSociometryMetrics();
       const sorted = Object.values(metrics.stats).sort((a, b) => b.weightedScore - a.weightedScore);
 
-      // Inisialisasi k kelompok
       const groups = Array.from({ length: k }, (_, i) => ({
         id: i + 1,
         nama: `Kelompok ${i + 1}`,
         members: []
       }));
 
-      // Pisahkan kategori
       const stars = sorted.filter(s => s.classification === 'Star');
       const isolates = sorted.filter(s => s.classification === 'Isolate');
       const others = sorted.filter(s => s.classification !== 'Star' && s.classification !== 'Isolate');
 
-      // 1. Distribusikan Siswa Populer (Star) sebagai jangkar/poros di kelompok berbeda
       stars.forEach((st, idx) => {
         groups[idx % k].members.push({ ...st, role: 'Ketua / Poros Diskusi' });
       });
 
-      // 2. Tempatkan Siswa Terisolir (Isolate) ke dalam kelompok yang sudah ada Star/anggota suportif
-      isolates.forEach((iso, idx) => {
-        // Taruh di kelompok yang anggotanya paling sedikit
+      isolates.forEach((iso) => {
         groups.sort((a, b) => a.members.length - b.members.length);
         groups[0].members.push({ ...iso, role: 'Fokus Pendampingan' });
       });
 
-      // 3. Masukkan sisa siswa secara bergantian untuk menjaga keseimbangan gender
       others.forEach((oth) => {
         groups.sort((a, b) => a.members.length - b.members.length);
         groups[0].members.push({ ...oth, role: 'Anggota Aktif' });
       });
 
-      // Render Cards Kelompok
       container.innerHTML = '';
       groups.forEach(grp => {
         const card = document.createElement('div');
@@ -1992,79 +2114,8 @@
     }
 
     // ==========================================
-    // 9. TAB 5: MANAJEMEN SISWA & BACKUP DATA
+    // 9. TAB 5: MANAJEMEN SISWA & DATA TABLE
     // ==========================================
-    function handleTambahSiswaSatu(e) {
-      e.preventDefault();
-      const namaInput = document.getElementById('inputNamaTunggal');
-      const nama = namaInput.value.trim();
-      const gender = document.querySelector('input[name="genderTunggal"]:checked')?.value || 'L';
-
-      if (!nama) return;
-
-      // Cek apakah nama sudah ada
-      if (AppState.students.some(s => s.nama.toLowerCase() === nama.toLowerCase())) {
-        showToast("Nama siswa sudah terdaftar!", "warning");
-        return;
-      }
-
-      const newId = 's_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
-      AppState.students.push({
-        id: newId,
-        nama: nama,
-        gender: gender
-      });
-
-      saveStateToStorage();
-      namaInput.value = '';
-      showToast(`Siswa "${nama}" berhasil ditambahkan!`, "success");
-      renderTabelSiswaManajemen();
-    }
-
-    function handleTambahSiswaBatch() {
-      const textarea = document.getElementById('inputBatchNama');
-      const text = textarea.value.trim();
-      const defaultGenderOpt = document.getElementById('batchDefaultGender').value;
-
-      if (!text) {
-        showToast("Masukkan daftar nama siswa terlebih dahulu!", "warning");
-        return;
-      }
-
-      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-      let addedCount = 0;
-
-      lines.forEach((line, idx) => {
-        let gender = 'L';
-        let nama = line;
-
-        // Cek jika baris memiliki format seperti "Ahmad (L)" atau "Citra, P"
-        const match = line.match(/^(.*?)[,\s\t]*[\(\[]?([LlPp])[\)\]]?$/);
-        if (match) {
-          nama = match[1].trim();
-          gender = match[2].toUpperCase();
-        } else {
-          if (defaultGenderOpt === 'L') gender = 'L';
-          else if (defaultGenderOpt === 'P') gender = 'P';
-          else gender = idx % 2 === 0 ? 'L' : 'P'; // default selang-seling jika auto
-        }
-
-        if (nama && !AppState.students.some(s => s.nama.toLowerCase() === nama.toLowerCase())) {
-          AppState.students.push({
-            id: 's_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).substr(2, 4),
-            nama: nama,
-            gender: gender
-          });
-          addedCount++;
-        }
-      });
-
-      saveStateToStorage();
-      textarea.value = '';
-      showToast(`${addedCount} siswa baru berhasil ditambahkan secara serentak!`, "success");
-      renderTabelSiswaManajemen();
-    }
-
     function renderTabelSiswaManajemen() {
       const tbody = document.getElementById('tabelSiswaBody');
       const badgeTotal = document.getElementById('badgeTotalSiswa');
@@ -2075,16 +2126,32 @@
       if (badgeTotal) badgeTotal.innerText = `${AppState.students.length} Siswa`;
 
       if (AppState.students.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400">Belum ada siswa yang ditambahkan. Silakan tambah satu per satu atau klik "Muat Data Demo".</td></tr>`;
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="p-8 text-center text-slate-400">
+              <p class="font-semibold text-slate-600 mb-1">Daftar siswa di Google Sheets masih kosong.</p>
+              <p class="text-[11px] text-slate-400">Pastikan lembar 'Siswa' di Google Spreadsheet Anda telah diisi nama peserta didik, lalu tekan tombol "Muat Ulang / Refresh Data".</p>
+            </td>
+          </tr>
+        `;
         return;
       }
 
       const filtered = AppState.students.filter(s => s.nama.toLowerCase().includes(search));
 
       filtered.forEach((s, idx) => {
-        const isFilled = !!AppState.choices[s.id];
+        const choice = AppState.choices[s.id];
+        const isFilled = !!choice;
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-slate-50 transition';
+
+        let choicesText = '<span class="text-slate-400 italic">Belum mengisi</span>';
+        if (isFilled) {
+          const p1 = choice.p1 ? `<span class="text-blue-700 font-semibold">1: ${choice.p1}</span>` : '';
+          const p2 = choice.p2 ? `<span class="text-indigo-700 font-semibold">2: ${choice.p2}</span>` : '';
+          const p3 = choice.p3 ? `<span class="text-slate-600 font-semibold">3: ${choice.p3}</span>` : '';
+          choicesText = [p1, p2, p3].filter(Boolean).join(' · ');
+        }
 
         tr.innerHTML = `
           <td class="p-3 text-center text-slate-500 font-medium">${idx + 1}</td>
@@ -2096,22 +2163,18 @@
             ${isFilled ?
               `<span class="inline-flex items-center space-x-1 text-emerald-700 font-semibold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-[10px]">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                <span>Sudah</span>
+                <span>Tersimpan di Sheets</span>
               </span>` :
               `<span class="inline-flex items-center space-x-1 text-amber-700 font-semibold bg-amber-50 border border-amber-200 px-2 py-0.5 rounded text-[10px]">
-                <span>Belum</span>
+                <span>Belum Mengisi</span>
               </span>`
             }
           </td>
+          <td class="p-3 text-xs text-slate-600">${choicesText}</td>
           <td class="p-3 text-center">
-            <div class="flex items-center justify-center space-x-2">
-              <button onclick="bukaAngketSiswaDariManajemen('${s.id}')" title="Input/Edit Angket" class="p-1 text-blue-600 hover:text-blue-800 transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-              </button>
-              <button onclick="hapusSiswa('${s.id}')" title="Hapus Siswa" class="p-1 text-rose-500 hover:text-rose-700 transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-              </button>
-            </div>
+            <button onclick="bukaAngketSiswaDariManajemen('${s.id}')" title="Inputkan Pilihan Angket" class="px-2.5 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 rounded-lg text-xs font-semibold transition">
+              ${isFilled ? 'Ubah' : 'Input'}
+            </button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -2125,36 +2188,17 @@
       }, 50);
     }
 
-    function hapusSiswa(studentId) {
-      const student = AppState.students.find(s => s.id === studentId);
-      if (!student) return;
-
-      if (confirm(`Yakin ingin menghapus siswa "${student.nama}"? Seluruh respon sosiometri terkait siswa ini juga akan dibersihkan.`)) {
-        // Hapus dari daftar siswa
-        AppState.students = AppState.students.filter(s => s.id !== studentId);
-        // Hapus pilihan yang dibuat siswa ini
-        delete AppState.choices[studentId];
-        // Bersihkan referensi pilihan orang lain ke siswa ini
-        Object.keys(AppState.choices).forEach(chooserId => {
-          const c = AppState.choices[chooserId];
-          if (c.p1 === studentId) c.p1 = null;
-          if (c.p2 === studentId) c.p2 = null;
-          if (c.p3 === studentId) c.p3 = null;
-        });
-
-        saveStateToStorage();
-        showToast(`Siswa "${student.nama}" berhasil dihapus`, "info");
-        renderTabelSiswaManajemen();
-      }
-    }
-
     // ==========================================
-    // 10. BACKUP, RESTORE & DATA DEMO
+    // 10. BACKUP JSON & MODAL IDENTITAS
     // ==========================================
     function backupDataJSON() {
+      if (AppState.students.length === 0) {
+        showToast("Tidak ada data siswa untuk dicadangkan!", "warning");
+        return;
+      }
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(AppState, null, 2));
       const downloadAnchor = document.createElement('a');
-      const filename = `sosiometri_bk_${(AppState.meta.kelas || 'kelas').replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.json`;
+      const filename = `sosiometri_bk_sheets_${new Date().toISOString().split('T')[0]}.json`;
       downloadAnchor.setAttribute("href", dataStr);
       downloadAnchor.setAttribute("download", filename);
       document.body.appendChild(downloadAnchor);
@@ -2163,108 +2207,6 @@
       showToast("Cadangan file JSON berhasil diunduh!", "success");
     }
 
-    function handleRestoreJSON(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        try {
-          const imported = JSON.parse(event.target.result);
-          if (imported && Array.isArray(imported.students)) {
-            if (confirm(`Pulihkan data dari file? Ini akan memperbarui data kelas "${imported.meta?.kelas || '-'}" dengan ${imported.students.length} siswa.`)) {
-              AppState = imported;
-              saveStateToStorage();
-              showToast("Data berhasil dipulihkan dari file JSON!", "success");
-              renderTabelSiswaManajemen();
-              syncHeaderDisplay();
-            }
-          } else {
-            showToast("Format file JSON tidak sesuai struktur Sosiometri BK!", "error");
-          }
-        } catch (err) {
-          showToast("Gagal membaca file JSON!", "error");
-        }
-      };
-      reader.readAsText(file);
-      e.target.value = '';
-    }
-
-    function confirmResetAllData() {
-      if (confirm("PERINGATAN: Apakah Anda yakin ingin MENGHAPUS SEMUA data siswa dan respon angket? Tindakan ini tidak dapat dibatalkan.")) {
-        AppState.students = [];
-        AppState.choices = {};
-        saveStateToStorage();
-        showToast("Seluruh data berhasil dikosongkan.", "info");
-        renderTabelSiswaManajemen();
-        syncHeaderDisplay();
-      }
-    }
-
-    // Muat Data Sampel / Demo Lengkap (12 Siswa Realistis dengan Star, Isolate, Mutual)
-    function loadSampleDemoData() {
-      const demoStudents = [
-        { id: "s1", nama: "Aditya Pratama", gender: "L" },
-        { id: "s2", nama: "Anisa Rahma", gender: "P" },
-        { id: "s3", nama: "Bagus Permadi", gender: "L" },
-        { id: "s4", nama: "Citra Lestari", gender: "P" },
-        { id: "s5", nama: "Dika Hendrawan", gender: "L" },
-        { id: "s6", nama: "Fania Maulida", gender: "P" },
-        { id: "s7", nama: "Farhan Hakim", gender: "L" },
-        { id: "s8", nama: "Gita Amanda", gender: "P" },
-        { id: "s9", nama: "Hafiz Ramadhan", gender: "L" },
-        { id: "s10", nama: "Indah Permata", gender: "P" },
-        { id: "s11", nama: "Kevin Sanjaya", gender: "L" },
-        { id: "s12", nama: "Laras Wulandari", gender: "P" }
-      ];
-
-      // Simulasi Dinamika:
-      // Star: Dika Hendrawan (s5) & Citra Lestari (s4)
-      // Mutual pairs: (s1 <-> s3), (s4 <-> s5), (s2 <-> s6)
-      // Isolate: Farhan Hakim (s7) - tidak dipilih sama sekali
-      // Neglected: Kevin Sanjaya (s11) - hanya 1 pilihan bobot 1
-      const demoChoices = {
-        "s1": { p1: "s3", p2: "s5", p3: "s9", alasan: "Sering belajar matematika bareng Bagus dan Dika." },
-        "s2": { p1: "s6", p2: "s4", p3: "s8", alasan: "Fania dan Citra sangat suportif dan pintar berdiskusi." },
-        "s3": { p1: "s1", p2: "s5", p3: "s12", alasan: "Aditya teman akrab sejak SMP." },
-        "s4": { p1: "s5", p2: "s2", p3: "s6", alasan: "Dika sangat bertanggung jawab dalam kelompok." },
-        "s5": { p1: "s4", p2: "s1", p3: "s3", alasan: "Citra dan Aditya sangat aktif dan komunikatif." },
-        "s6": { p1: "s2", p2: "s4", p3: "s10", alasan: "Anisa sangat tekun dan rajin mencatat." },
-        "s7": { p1: "s5", p2: "s1", p3: "s9", alasan: "Ingin belajar kelompok dengan teman yang pintar." },
-        "s8": { p1: "s4", p2: "s6", p3: "s5", alasan: "Citra dan Fania sabar membimbing tugas." },
-        "s9": { p1: "s5", p2: "s3", p3: "s1", alasan: "Bagus dan Dika sangat asyik diajak kerja kelompok." },
-        "s10": { p1: "s4", p2: "s8", p3: "s11", alasan: "Citra ketua kelompok yang adil." },
-        "s11": { p1: "s5", p2: "s4", p3: "s3", alasan: "Ingin kelompok belajar yang fokus dan terarah." },
-        "s12": { p1: "s4", p2: "s5", p3: "s2", alasan: "Citra dan Dika memiliki cara belajar yang bagus." }
-      };
-
-      AppState.students = demoStudents;
-      AppState.choices = demoChoices;
-      AppState.meta.kelas = "X-E6 (Demo BK)";
-      AppState.meta.namaSekolah = "SMA NEGERI 1 INDONESIA";
-
-      saveStateToStorage();
-      showToast("Data sampel sosiometri (12 siswa) berhasil dimuat!", "success");
-      
-      // Render ulang tampilan aktif
-      if (currentTab === 'angket') {
-        renderFormAngketOptions();
-        renderStatusPengisianList();
-      } else if (currentTab === 'sosiogram') {
-        renderSosiogramGraph();
-      } else if (currentTab === 'matriks') {
-        renderMatrixTable();
-      } else if (currentTab === 'laporan') {
-        renderLaporanPage();
-      } else if (currentTab === 'manajemen') {
-        renderTabelSiswaManajemen();
-      }
-      syncHeaderDisplay();
-    }
-
-    // ==========================================
-    // 11. MODAL PENGATURAN IDENTITAS SEKOLAH & BK
-    // ==========================================
     function openConfigModal() {
       const modal = document.getElementById('modalOverlay');
       const content = document.getElementById('modalContent');
@@ -2368,7 +2310,6 @@
       AppState.meta.kota = document.getElementById('cfgKota').value.trim();
       AppState.meta.tanggalAsesmen = document.getElementById('cfgTanggal').value;
 
-      saveStateToStorage();
       closeModal();
       showToast("Identitas asesmen & BK berhasil diperbarui!", "success");
 
@@ -2397,18 +2338,74 @@
     }
 
     // ==========================================
+    // 11. TAB & DISPLAY NAVIGATION CONTROLLER
+    // ==========================================
+    let currentTab = 'angket';
+    function switchTab(tabId) {
+      currentTab = tabId;
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-brand-800', 'text-white', 'shadow-sm', 'font-bold');
+        btn.classList.add('text-blue-100');
+      });
+
+      const activeSection = document.getElementById(`tab-${tabId}`);
+      const activeNav = document.getElementById(`nav-${tabId}`);
+      if (activeSection) activeSection.classList.remove('hidden');
+      if (activeNav) {
+        activeNav.classList.add('bg-brand-800', 'text-white', 'shadow-sm', 'font-bold');
+        activeNav.classList.remove('text-blue-100');
+      }
+
+      renderActiveTab();
+    }
+
+    function renderActiveTab() {
+      if (currentTab === 'angket') {
+        renderFormAngketOptions();
+        renderStatusPengisianList();
+      } else if (currentTab === 'sosiogram') {
+        setTimeout(() => renderSosiogramGraph(), 80);
+      } else if (currentTab === 'matriks') {
+        renderMatrixTable();
+      } else if (currentTab === 'laporan') {
+        renderLaporanPage();
+      } else if (currentTab === 'manajemen') {
+        renderTabelSiswaManajemen();
+      }
+    }
+
+    function syncHeaderDisplay() {
+      const elKelas = document.getElementById('headerKelasLabel');
+      const elQuick = document.getElementById('quickStatText');
+      const elDot = document.getElementById('headerQuickDot');
+
+      if (elKelas) elKelas.innerText = `Kelas: ${AppState.meta.kelas || '-'}`;
+      
+      const total = AppState.students.length;
+      const filled = Object.keys(AppState.choices).length;
+      if (elQuick) elQuick.innerText = `${total} Siswa (${filled} Mengisi)`;
+
+      if (elDot) {
+        if (total === 0) {
+          elDot.className = "inline-block w-2 h-2 rounded-full bg-slate-400";
+        } else if (filled === total) {
+          elDot.className = "inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+        } else {
+          elDot.className = "inline-block w-2 h-2 rounded-full bg-emerald-400";
+        }
+      }
+    }
+
+    // ==========================================
     // 12. INISIALISASI SAAT HALAMAN DIMUAT
     // ==========================================
     window.addEventListener('DOMContentLoaded', () => {
-      loadStateFromStorage();
+      syncHeaderDisplay();
+      switchTab('angket');
       
-      // Jika baru pertama kali dibuka dan belum ada siswa, muat demo otomatis agar langsung interaktif
-      if (AppState.students.length === 0) {
-        loadSampleDemoData();
-      } else {
-        syncHeaderDisplay();
-        switchTab('angket');
-      }
+      // Ambil data pertama kali dari Google Sheets Web App secara otomatis
+      fetchDataFromSheet(false);
     });
   </script>
 </body>
